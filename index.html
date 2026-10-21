@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <!-- منطقة آمنة لشاشات الآيفون (الشاشة الكاملة) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>لسان — مترجم ومعلّم لغوي</title>
+  <meta name="description" content="مترجم ومعلّم لغوي تفاعلي: معنى الكلمة، جمل توضيحية، التصريفات، اختبارات ونطق صوتي.">
+
+  <!-- سياسة أمان المحتوى (CSP): تسمح فقط بالمصادر والخوادم المذكورة -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://api.mymemory.translated.net https://api.dictionaryapi.dev https://api.anthropic.com; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+
+  <!-- PWA + iOS: يفتح كتطبيق مستقل بلا شريط المتصفح -->
+  <meta name="theme-color" content="#14233B">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="لسان">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <!-- الخط: Cairo من Google Fonts (مع خطوط بديلة عند عدم الاتصال) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- أيقونات SVG مدمجة (تعمل بدون اتصال ولا تحتاج مكتبة خارجية) -->
+<svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4h12a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z"/><path d="M8 8.5h7M8 12.5h7"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4"/><path d="M3 8h14"/><path d="m17 20 4-4-4-4"/><path d="M21 16H7"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+  <symbol id="i-star-fill" viewBox="0 0 24 24"><path fill="currentColor" d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+  <symbol id="i-quiz" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.6"/><path d="M12 2v3.4M12 18.6V22M2 12h3.4M18.6 12H22M4.9 4.9l2.4 2.4M16.7 16.7l2.4 2.4M4.9 19.1l2.4-2.4M16.7 7.3l2.4-2.4"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V5"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M19 16v4M17 18h4"/></symbol>
+  <symbol id="i-translate" viewBox="0 0 24 24"><path d="M4 6h8M8 4v2M6 6c0 4 3 7 6 8M11 6c0 4-3 7-7 8"/><path d="m13 20 4-9 4 9M14.5 17h5"/></symbol>
+  <symbol id="i-plus-square" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 14h2M14 18h2v2M18 18h2v2"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="brand">
+    <span class="logo" aria-hidden="true"><span class="mk">لسان</span></span>
+    <span class="tag">مترجم ومعلّم لغوي</span>
+  </div>
+  <div class="top-actions">
+    <span id="netBadge" class="net" hidden>بدون اتصال</span>
+    <button id="btnInstallTop" class="pill" type="button" hidden>
+      <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>تثبيت</span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ البحث والترجمة ============ -->
+  <section class="view" data-view="search">
+    <div class="langbar">
+      <label class="sr" for="srcLang">من</label>
+      <select id="srcLang"></select>
+      <button id="swapBtn" class="icon-btn swap" type="button" aria-label="تبديل اللغتين" title="تبديل اللغتين">
+        <svg class="ic" aria-hidden="true"><use href="#i-swap"/></svg>
+      </button>
+      <label class="sr" for="tgtLang">إلى</label>
+      <select id="tgtLang"></select>
+    </div>
+
+    <form id="searchForm" class="searchbox" autocomplete="off">
+      <input id="q" type="text" maxlength="300" placeholder="اكتب كلمة أو جملة…" enterkeyhint="search"
+             autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="النص المراد ترجمته">
+      <button id="clearQ" class="icon-btn" type="button" hidden aria-label="مسح">
+        <svg class="ic" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+      <button class="go" type="submit">
+        <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span>ابحث</span>
+      </button>
+    </form>
+    <p id="modeLine" class="modeline"></p>
+
+    <div id="recent" class="recent" aria-label="عمليات البحث الأخيرة"></div>
+    <div id="result" aria-live="polite"></div>
+  </section>
+
+  <!-- ============ المفضلة ============ -->
+  <section class="view" data-view="favs" hidden>
+    <h1 class="h">المفضلة</h1>
+    <div class="toolbar">
+      <input id="favFilter" type="search" placeholder="ابحث في المحفوظات" aria-label="بحث في المفضلة">
+      <button id="favExport" class="mini" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>تصدير</button>
+      <button id="favImport" class="mini" type="button"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg>استيراد</button>
+      <input id="importFile" type="file" accept="application/json,.json" hidden>
+    </div>
+    <div id="favList"></div>
+  </section>
+
+  <!-- ============ الاختبار ============ -->
+  <section class="view" data-view="quiz" hidden>
+    <h1 class="h">اختبار سريع</h1>
+    <div id="quizBox"></div>
+  </section>
+
+  <!-- ============ التثبيت والمشاركة ============ -->
+  <section class="view" data-view="install" hidden>
+    <h1 class="h">التثبيت والمشاركة</h1>
+
+    <div class="card hero">
+      <p id="installStatus" class="lead"></p>
+      <button id="btnInstall" class="go wide" type="button">
+        <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>تثبيت التطبيق</span>
+      </button>
+    </div>
+
+    <h2 class="h2">طريقة التثبيت على جهازك</h2>
+
+    <details class="card guide" id="g-ios">
+      <summary>الآيفون والآيباد (Safari)</summary>
+      <ol>
+        <li>افتح الموقع في متصفح <b>Safari</b> (التثبيت لا يعمل من متصفحات أخرى على iOS).</li>
+        <li>اضغط زر المشاركة <svg class="ic inline" aria-hidden="true"><use href="#i-upload"/></svg> أسفل الشاشة.</li>
+        <li>مرّر للأسفل واختر <b>«إضافة إلى الشاشة الرئيسية»</b> <svg class="ic inline" aria-hidden="true"><use href="#i-plus-square"/></svg>.</li>
+        <li>اضغط <b>«إضافة»</b> — ستجد أيقونة لسان على شاشتك الرئيسية.</li>
+      </ol>
+    </details>
+
+    <details class="card guide" id="g-android">
+      <summary>سامسونج والأندرويد (Chrome)</summary>
+      <ol>
+        <li>افتح الموقع في <b>Chrome</b> أو متصفح سامسونج.</li>
+        <li>اضغط قائمة النقاط الثلاث <svg class="ic inline" aria-hidden="true"><use href="#i-dots"/></svg> أعلى المتصفح.</li>
+        <li>اختر <b>«تثبيت التطبيق»</b> أو <b>«إضافة إلى الشاشة الرئيسية»</b>.</li>
+        <li>أكّد بالضغط على <b>«تثبيت»</b>.</li>
+      </ol>
+    </details>
+
+    <details class="card guide" id="g-pc">
+      <summary>الكمبيوتر (Windows / Mac)</summary>
+      <ol>
+        <li>افتح الموقع في Chrome أو Edge.</li>
+        <li>اضغط أيقونة التثبيت <svg class="ic inline" aria-hidden="true"><use href="#i-download"/></svg> في شريط العنوان.</li>
+        <li>اضغط <b>«تثبيت / Install»</b>.</li>
+      </ol>
+    </details>
+
+    <h2 class="h2">شارك التطبيق</h2>
+    <div class="card">
+      <p class="link-box" id="shareUrl" dir="ltr"></p>
+      <div class="btn-row">
+        <button id="btnShare" class="go" type="button"><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg><span>مشاركة التطبيق</span></button>
+        <button id="btnCopy" class="ghost" type="button"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><span>نسخ الرابط</span></button>
+      </div>
+      <p class="hint">المشاركة تفتح قائمة الجهاز (واتساب، تيليجرام، وغيرها).</p>
+    </div>
+
+    <h2 class="h2">رمز QR</h2>
+    <div class="card qr">
+      <img id="qrImg" src="qr.png" alt="رمز QR لفتح التطبيق" width="180" height="180">
+      <p id="qrMissing" class="hint" hidden>ضع صورة الرمز باسم <b dir="ltr">qr.png</b> بجانب index.html لتظهر هنا.</p>
+      <p class="hint">امسح الرمز بكاميرا هاتفك لفتح التطبيق مباشرة.</p>
+    </div>
+  </section>
+
+  <!-- ============ الإعدادات ============ -->
+  <section class="view" data-view="settings" hidden>
+    <h1 class="h">الإعدادات</h1>
+
+    <div class="card group">
+      <h2 class="h2">المظهر</h2>
+      <div class="row"><label for="s-theme">السمة</label>
+        <select id="s-theme" data-key="theme"><option value="auto">تلقائي (حسب الجهاز)</option><option value="light">فاتح</option><option value="dark">داكن</option></select></div>
+      <div class="row"><label for="s-font">حجم الخط</label>
+        <span class="range"><input id="s-font" type="range" min="85" max="130" step="5" data-key="fontScale"><span class="val"></span></span></div>
+    </div>
+
+    <div class="card group">
+      <h2 class="h2">النطق الصوتي</h2>
+      <div class="row"><label for="s-auto">نطق الكلمة تلقائياً بعد البحث</label><input id="s-auto" type="checkbox" data-key="autoSpeak"></div>
+      <div class="row"><label for="s-rate">سرعة النطق</label>
+        <span class="range"><input id="s-rate" type="range" min="0.5" max="1.2" step="0.1" data-key="rate"><span class="val"></span></span></div>
+      <div class="row"><label for="voiceSel">الصوت</label><select id="voiceSel" data-key="voice"></select></div>
+    </div>
+
+    <div class="card group">
+      <h2 class="h2">محتوى النتائج</h2>
+      <div class="row"><label for="s-ex">إظهار الجمل التوضيحية</label><input id="s-ex" type="checkbox" data-key="showExamples"></div>
+      <div class="row"><label for="s-exn">عدد الجمل</label>
+        <select id="s-exn" data-key="maxExamples"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+      <div class="row"><label for="s-sen">إظهار فروق المعاني</label><input id="s-sen" type="checkbox" data-key="showSenses"></div>
+      <div class="row"><label for="s-inf">إظهار التصريفات</label><input id="s-inf" type="checkbox" data-key="showInflections"></div>
+    </div>
+
+    <div class="card group">
+      <h2 class="h2">وضع الشرح الذكي (اختياري)</h2>
+      <p class="hint">يعطي شرحاً أعمق وتصريفات دقيقة وفروق معاني بحسب السياق. يحتاج مفتاح API خاصاً بك من Anthropic، ويُحفظ على جهازك فقط ويُرسل مباشرة إلى api.anthropic.com. بدونه يعمل التطبيق بالقواميس المفتوحة.</p>
+      <div class="row"><label for="s-ai">تفعيل الوضع الذكي</label><input id="s-ai" type="checkbox" data-key="useAI"></div>
+      <div class="row col"><label for="s-key">مفتاح API</label><input id="s-key" type="password" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…" data-key="apiKey"></div>
+      <div class="row col"><label for="s-model">النموذج</label><input id="s-model" type="text" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" data-key="model"></div>
+    </div>
+
+    <div class="card group">
+      <h2 class="h2">البيانات والتخزين</h2>
+      <div class="row"><label for="s-cache">حفظ نتائج البحث للعمل بدون إنترنت</label><input id="s-cache" type="checkbox" data-key="cache"></div>
+      <div class="row"><label for="s-hist">عدد عمليات البحث الأخيرة</label>
+        <select id="s-hist" data-key="historyMax"><option value="0">بدون سجل</option><option value="8">8</option><option value="15">15</option><option value="30">30</option></select></div>
+      <div class="btn-row">
+        <button id="clrHist" class="ghost" type="button">مسح السجل</button>
+        <button id="clrCache" class="ghost" type="button">مسح الذاكرة المؤقتة</button>
+        <button id="clrFavs" class="ghost danger" type="button">حذف المفضلة</button>
+        <button id="resetAll" class="ghost danger" type="button">إعادة ضبط كل شيء</button>
+      </div>
+    </div>
+
+    <p class="hint center">لسان — الإصدار 1.0</p>
+  </section>
+</main>
+
+<nav class="tabbar" aria-label="التنقل الرئيسي">
+  <button class="tab" type="button" data-view="search" aria-selected="true"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg><span>ترجمة</span></button>
+  <button class="tab" type="button" data-view="favs" aria-selected="false"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg><span>المفضلة</span></button>
+  <button class="tab" type="button" data-view="quiz" aria-selected="false"><svg class="ic" aria-hidden="true"><use href="#i-quiz"/></svg><span>اختبار</span></button>
+  <button class="tab" type="button" data-view="install" aria-selected="false"><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg><span>تثبيت</span></button>
+  <button class="tab tab-gear" type="button" data-view="settings" aria-selected="false"><svg class="ic" aria-hidden="true"><use href="#i-gear"/></svg><span>الإعدادات</span></button>
+</nav>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="script.js"></script>
+</body>
+</html>
