@@ -1,12 +1,12 @@
 /* ==========================================================
-   لسان — Service Worker
+   Languway — Service Worker
    - الواجهة: تُخزَّن عند التثبيت وتعمل بدون إنترنت
    - ملفات الموقع: تُحدَّث في الخلفية (stale-while-revalidate)
    - نتائج الترجمة والقاموس: الشبكة أولاً ثم آخر نسخة محفوظة
    ========================================================== */
-const VERSION = 'lisan-v1';
-const API_CACHE = 'lisan-api';
-const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png'];
+const VERSION = 'languway-v2';
+const API_CACHE = 'languway-api';
+const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png'];
 const API_HOSTS = ['api.mymemory.translated.net', 'api.dictionaryapi.dev'];
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
