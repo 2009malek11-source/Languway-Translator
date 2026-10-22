@@ -1,14 +1,11 @@
-# Languway — مترجم ومعلّم لغوي (PWA)
+# مترجم Languway (PWA)
 
-هيكل مسطح (بدون مجلدات) ليعمل مباشرة على GitHub Pages:
-https://2009malek11-source.github.io/Languway-Translator/
+الرابط: https://2009malek11-source.github.io/Languway-Translator/
 
-## النشر
-1. ارفع كل الملفات إلى جذر المستودع Languway-Translator.
-2. فعّل GitHub Pages من Settings ← Pages.
-3. افتح الرابط على HTTPS.
+## الاستبدال على GitHub
+1. افتح المستودع Languway-Translator ← Add file ← Upload files.
+2. احذف الملفات القديمة كلها أولاً (حدّدها واحذفها) ثم ارفع **كل** ملفات هذا المجلد (31 ملفاً) إلى الجذر مباشرة، بما فيها `.nojekyll`.
+3. انتظر دقيقة حتى ينشر GitHub Pages، ثم افتح الرابط. يجب أن ترى v2.2 بجانب الاسم.
+4. إن كنت ثبّتّ التطبيق سابقاً فاحذفه من الشاشة الرئيسية ثم ثبّته من جديد.
 
-## ملاحظات
-- عند تعديل أي ملف غيّر `VERSION` في `sw.js` لتحديث الذاكرة المؤقتة.
-- الوضع الذكي اختياري: مفتاح Anthropic API في الإعدادات (يُحفظ على جهازك فقط).
-- تقييم النطق يحتاج متصفحاً يدعم التعرّف الصوتي (Chrome / Safari).
+عند أي تعديل لاحق غيّر `VERSION` في `sw.js`.

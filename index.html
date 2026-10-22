@@ -4,11 +4,26 @@
   <meta charset="utf-8">
   <!-- منطقة آمنة لشاشات الآيفون (الشاشة الكاملة) -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Languway — مترجم ومعلّم لغوي</title>
-  <meta name="description" content="Languway: مترجم ومعلّم لغوي تفاعلي — معنى الكلمة، جمل توضيحية، تصريفات، اختبارات وبطاقات مراجعة ونطق صوتي.">
+  <title>مترجم Languway — ترجم وتعلّم</title>
+  <meta name="description" content="مترجم Languway: مترجم ومعلّم لغوي تفاعلي — معنى الكلمة، جمل توضيحية، تصريفات، اختبارات وبطاقات مراجعة ونطق صوتي.">
+  <link rel="canonical" href="https://2009malek11-source.github.io/Languway-Translator/">
+
+  <!-- صورة الغلاف عند مشاركة الرابط (واتساب، تيليجرام، فيسبوك، X) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="مترجم Languway">
+  <meta property="og:title" content="مترجم Languway — ترجم وتعلّم">
+  <meta property="og:description" content="مترجم ومعلّم لغوي تفاعلي: المعنى والجمل والتصريفات والاختبارات والنطق.">
+  <meta property="og:url" content="https://2009malek11-source.github.io/Languway-Translator/">
+  <meta property="og:image" content="https://2009malek11-source.github.io/Languway-Translator/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="ar_AR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="مترجم Languway — ترجم وتعلّم">
+  <meta name="twitter:image" content="https://2009malek11-source.github.io/Languway-Translator/og-image.png">
 
   <!-- سياسة أمان المحتوى (CSP): تسمح فقط بالمصادر والخوادم المذكورة -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://fonts.googleapis.com https://api.mymemory.translated.net https://api.dictionaryapi.dev https://api.anthropic.com; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://fonts.googleapis.com https://api.mymemory.translated.net https://api.dictionaryapi.dev https://text.pollinations.ai; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
 
   <!-- PWA + iOS: يفتح كتطبيق مستقل بلا شريط المتصفح -->
@@ -18,8 +33,18 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Languway">
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <!-- شاشة التشغيل على الآيفون (شعارك) -->
+  <link rel="apple-touch-startup-image" href="splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 
   <!-- الخطوط: Cairo للعربية + Poppins لاسم العلامة (من Google Fonts) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,6 +53,14 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<!-- شاشة افتتاحية بشعار Languway -->
+<div id="splash" class="splash" aria-hidden="true">
+  <img class="sp-logo" src="logo-mark.png" alt="" width="200" height="205">
+  <p class="sp-name">مترجم Languway</p>
+  <p class="sp-tag">ترجم وتعلّم</p>
+  <div class="sp-bar"><i></i></div>
+</div>
 
 <!-- أيقونات SVG مدمجة (تعمل بدون اتصال ولا تحتاج مكتبة خارجية) -->
 <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
@@ -73,7 +106,7 @@
   <aside class="panel" id="panel" aria-label="القائمة الرئيسية">
     <div class="p-head">
       <img class="p-logo" src="logo-mark.png" alt="" width="38" height="38">
-      <span class="p-title">Languway</span>
+      <span class="p-title"><small>مترجم</small> Languway</span>
       <button id="panelToggle" class="p-toggle" type="button" aria-label="طي القائمة" aria-expanded="true">
         <svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg>
       </button>
@@ -100,7 +133,7 @@
     <header class="top">
       <div class="brand">
         <img src="logo-mark.png" alt="" width="34" height="34">
-        <span class="brand-name">Languway</span>
+        <span class="brand-ar">مترجم</span><span class="brand-name">Languway</span><span class="ver">v2.2</span>
       </div>
       <div class="top-actions">
         <span id="netBadge" class="net" hidden>بدون اتصال</span>
@@ -120,6 +153,7 @@
       <!-- ============ البحث والترجمة ============ -->
       <section class="view" data-view="search">
         <div class="hero">
+          <img class="hero-logo" src="logo-mark.png" alt="" width="64" height="64">
           <div class="hero-text">
             <h1>ترجم وتعلّم</h1>
             <p>اكتب كلمة أو جملة لتعرف معناها وتصريفها وكيف تُستخدم.</p>
@@ -192,7 +226,7 @@
         <h1 class="h">التثبيت والمشاركة</h1>
 
         <div class="card hero-card">
-          <img class="install-logo" src="logo-full.png" alt="Languway" width="120" height="119">
+          <img class="install-logo" src="logo-full.png" alt="مترجم Languway" width="120" height="119">
           <p id="installStatus" class="lead"></p>
           <button id="btnInstall" class="go wide" type="button">
             <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span>تثبيت التطبيق</span>
@@ -301,11 +335,9 @@
         </div>
 
         <div class="card group">
-          <h2 class="h2">وضع الشرح الذكي (اختياري)</h2>
-          <p class="hint">يعطي شرحاً أعمق وتصريفات دقيقة وفروق معاني بحسب السياق. يحتاج مفتاح API خاصاً بك من Anthropic، ويُحفظ على جهازك فقط ويُرسل مباشرة إلى api.anthropic.com. بدونه يعمل التطبيق بالقواميس المفتوحة.</p>
-          <div class="row"><label for="s-ai">تفعيل الوضع الذكي</label><input id="s-ai" type="checkbox" data-key="useAI"></div>
-          <div class="row col"><label for="s-key">مفتاح API</label><input id="s-key" type="password" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…" data-key="apiKey"></div>
-          <div class="row col"><label for="s-model">النموذج</label><input id="s-model" type="text" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" data-key="model"></div>
+          <h2 class="h2">الشرح الذكي</h2>
+          <div class="row"><label for="s-ai">شرح معمّق وتصريفات ولهجات وتفكيك الجملة</label><input id="s-ai" type="checkbox" data-key="useAI"></div>
+          <p class="hint">يعمل تلقائياً ولا يحتاج أي إعداد. عند تعذّره يستخدم التطبيق القواميس المفتوحة.</p>
         </div>
 
         <div class="card group">
@@ -321,7 +353,7 @@
           </div>
         </div>
 
-        <p class="hint center">Languway — الإصدار 2.0</p>
+        <p class="hint center">Languway — الإصدار 2.2</p>
       </section>
     </main>
   </div>

@@ -1,5 +1,5 @@
 {
-  "name": "Languway — مترجم ومعلّم لغوي",
+  "name": "مترجم Languway",
   "short_name": "Languway",
   "description": "مترجم ومعلّم لغوي تفاعلي: المعنى والجمل والتصريفات والاختبارات والنطق.",
   "lang": "ar",
@@ -9,14 +9,20 @@
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen"],
+  "orientation": "any",
   "background_color": "#F3F7FF",
   "theme_color": "#1B2FA8",
   "categories": ["education", "productivity"],
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "screenshot-narrow-1.png", "sizes": "540x960", "type": "image/png", "form_factor": "narrow", "label": "الترجمة والشرح التعليمي" },
+    { "src": "screenshot-narrow-2.png", "sizes": "540x960", "type": "image/png", "form_factor": "narrow", "label": "لوحة التقدم وكلمة اليوم" },
+    { "src": "screenshot-wide.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "النسخة الكبيرة مع القائمة الجانبية" }
   ],
   "shortcuts": [
     { "name": "لوحتي", "url": "./index.html?view=dash", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },

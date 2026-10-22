@@ -4,9 +4,9 @@
    - ملفات الموقع: تُحدَّث في الخلفية (stale-while-revalidate)
    - نتائج الترجمة والقاموس: الشبكة أولاً ثم آخر نسخة محفوظة
    ========================================================== */
-const VERSION = 'languway-v2';
+const VERSION = 'languway-v4';
 const API_CACHE = 'languway-api';
-const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png'];
+const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-192.png', 'icon-maskable-512.png'];
 const API_HOSTS = ['api.mymemory.translated.net', 'api.dictionaryapi.dev'];
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
@@ -53,9 +53,15 @@ self.addEventListener('fetch', e => {
   if (FONT_HOSTS.includes(url.hostname)) { e.respondWith(staleWhileRevalidate(req, VERSION)); return; }
   if (url.origin !== location.origin) return;
 
+  // ملفات الموقع: الشبكة أولاً (يظهر كل تحديث فوراً) ثم النسخة المحفوظة عند انقطاع الإنترنت
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).catch(() => caches.match('index.html')));
+    e.respondWith(fetch(req).then(res => { const c = res.clone(); caches.open(VERSION).then(ca => ca.put('index.html', c)); return res; })
+      .catch(() => caches.match('index.html')));
     return;
   }
-  e.respondWith(staleWhileRevalidate(req, VERSION));
+  e.respondWith(
+    fetch(req, { cache: 'no-cache' })
+      .then(res => { if (res && res.ok) { const c = res.clone(); caches.open(VERSION).then(ca => ca.put(req, c)); } return res; })
+      .catch(() => caches.match(req))
+  );
 });

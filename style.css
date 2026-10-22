@@ -514,3 +514,59 @@ input[type="range"] { accent-color: var(--brand-2); }
 .grade:active { transform: scale(.94); }
 .g0 { background: #D14B4B; } .g1 { background: #E08A1E; } .g2 { background: #1E8E5A; } .g3 { background: #1B6BE0; }
 .stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+
+.ver { font-size: .65rem; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 0 6px; }
+
+/* ---------- الشاشة الافتتاحية ---------- */
+.splash {
+  position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: linear-gradient(160deg, #FFFFFF 30%, #D6F0FF 100%); color: #1B2FA8;
+  transition: opacity .6s ease, visibility .6s; animation: splash-safety .6s ease 3s forwards; /* أمان: تختفي حتى لو تعطّل السكربت */
+}
+.splash.hide { opacity: 0; visibility: hidden; }
+.sp-logo { width: min(52vw, 220px); height: auto; animation: sp-pop .9s cubic-bezier(.2, 1.1, .3, 1) both; }
+.sp-name { margin: 10px 0 0; font-size: 1.5rem; font-weight: 800; animation: sp-up .7s .35s ease both; }
+.sp-tag { margin: 0; color: #4A5E9E; animation: sp-up .7s .5s ease both; }
+.sp-bar { width: 140px; height: 5px; border-radius: 99px; background: #D5E3F7; overflow: hidden; margin-top: 18px; }
+.sp-bar i { display: block; height: 100%; width: 100%; border-radius: 99px; background: linear-gradient(90deg, #1B2FA8, #00B8F0); transform-origin: right; animation: sp-fill 1.3s ease both; }
+@keyframes sp-pop { from { opacity: 0; transform: scale(.7) translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes sp-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes sp-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes splash-safety { to { opacity: 0; visibility: hidden; } }
+
+/* ---------- الاسم وشعار الغلاف ---------- */
+.brand-ar { font-weight: 800; font-size: 1.05rem; color: var(--ink); margin-inline-end: 2px; }
+.p-title small { font-family: "Cairo", sans-serif; font-weight: 600; font-size: .8rem; opacity: .75; margin-inline-end: 4px; }
+.hero-logo {
+  position: absolute; top: 16px; inset-inline-end: 16px; width: 64px; height: 64px; padding: 10px; z-index: 2;
+  border-radius: 20px; background: rgba(255, 255, 255, .94); box-shadow: 0 10px 24px -8px rgba(0, 0, 40, .5);
+  animation: float 5s ease-in-out infinite;
+}
+@keyframes float { 50% { transform: translateY(-5px); } }
+.hero-text { margin-inline-end: 78px; }
+main.nf{display:grid;gap:12px;place-items:center;min-height:100vh;text-align:center;padding:24px}
+
+/* ---------- منع الفيض الأفقي على الجوالات الضيقة ---------- */
+html, body { max-width: 100%; overflow-x: hidden; }
+.top { gap: 8px; }
+.brand { min-width: 0; flex: 1 1 auto; }
+.brand-name, .brand-ar { white-space: nowrap; }
+.top-actions { flex: none; gap: 8px; }
+@media (max-width: 400px) {
+  .ver { display: none; }
+  .brand-ar { font-size: .9rem; }
+  .brand-name { font-size: 1.05rem; }
+  .brand img { width: 28px; }
+  .pill span { display: none; }            /* زر التثبيت يبقى أيقونة فقط */
+  .pill { padding: 7px 10px; }
+}
+.sp-logo { width: min(40vw, 170px); }
+.sp-name { font-size: 1.7rem; }
+.sp-name { font-family: "Poppins", "Cairo", sans-serif; }
+
+/* ---------- بطاقة النتيجة على الجوال: الكلمة كاملة وأدواتها في صف مستقل ---------- */
+.word { overflow-wrap: break-word; word-break: normal; font-size: clamp(1.6rem, 8vw, 2.1rem); }
+@media (max-width: 520px) {
+  .entry-head { flex-direction: column-reverse; align-items: stretch; gap: 4px; }
+  .entry-tools { justify-content: flex-start; }
+}
