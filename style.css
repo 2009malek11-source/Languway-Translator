@@ -570,3 +570,23 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .entry-head { flex-direction: column-reverse; align-items: stretch; gap: 4px; }
   .entry-tools { justify-content: flex-start; }
 }
+
+/* ---------- الشرح التعليمي للكلمة المُدخلة ---------- */
+.ai-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, var(--brand-2) 12%, var(--surface)); font-size: .88rem; }
+.ai-status.warn { background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.ai-status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brand-2); animation: pulse-ring 1.4s ease-out infinite; }
+.def { margin: 0 0 4px; font-size: 1.05rem; }
+.def-src { margin: 0; color: var(--muted); font-size: .92rem; }
+.num { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-inline-end: 8px; border-radius: 50%; background: var(--grad); color: #fff; font-size: .75rem; font-weight: 700; }
+.tpl { margin-inline-start: 8px; font-size: .7rem; padding: 0 8px; border-radius: 99px; background: var(--bg); color: var(--muted); }
+.tbl-wrap { overflow-x: auto; }
+.tenses { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.tenses td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tenses td:first-child { color: var(--muted); white-space: nowrap; font-size: .85rem; }
+.tenses td.form { font-weight: 700; color: var(--accent); white-space: nowrap; }
+.tenses tr:last-child td { border-bottom: 0; }
+.icon-btn.sm { width: 1.8rem; height: 1.8rem; vertical-align: middle; }
+.icon-btn.sm .ic { width: 1rem; height: 1rem; }
+.pron-wrap .pron-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.audio-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.audio-row audio { max-width: 100%; height: 36px; }
