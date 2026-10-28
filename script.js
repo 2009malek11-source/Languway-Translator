@@ -1,5 +1,5 @@
 /* ==========================================================
-   Languway Translator — منطق التطبيق
+   Languway — منطق التطبيق
    - لا نستخدم innerHTML ولا eval: كل النصوص تُدرج عبر textContent
    - مصادر البيانات: MyMemory (ترجمة) + dictionaryapi.dev (قاموس إنجليزي)
      + وضع ذكي اختياري عبر مفتاح API يملكه المستخدم
@@ -17,13 +17,10 @@
     ['es', 'Español', 'es-ES'], ['de', 'Deutsch', 'de-DE'], ['it', 'Italiano', 'it-IT'],
     ['tr', 'Türkçe', 'tr-TR'], ['ru', 'Русский', 'ru-RU'], ['pt', 'Português', 'pt-BR'],
     ['zh', '中文', 'zh-CN'], ['ja', '日本語', 'ja-JP'], ['ko', '한국어', 'ko-KR'],
-    ['hi', 'हिन्दी', 'hi-IN'], ['ur', 'اردو', 'ur-PK'], ['fa', 'فارسی', 'fa-IR'],
-    ['nl', 'Nederlands', 'nl-NL'], ['pl', 'Polski', 'pl-PL'], ['sv', 'Svenska', 'sv-SE'], ['id', 'Bahasa Indonesia', 'id-ID'],
-    ['th', 'ไทย', 'th-TH'], ['vi', 'Tiếng Việt', 'vi-VN'], ['he', 'עברית', 'he-IL'], ['el', 'Ελληνικά', 'el-GR'],
-    ['uk', 'Українська', 'uk-UA'], ['cs', 'Čeština', 'cs-CZ'], ['ro', 'Română', 'ro-RO'], ['bn', 'বাংলা', 'bn-BD']
+    ['hi', 'हिन्दी', 'hi-IN'], ['ur', 'اردو', 'ur-PK'], ['fa', 'فارسی', 'fa-IR']
   ];
   const LANG = Object.fromEntries(LANGS.map(([c, n, v]) => [c, { name: n, voice: v }]));
-  const RTL = new Set(['ar', 'fa', 'ur', 'he']);
+  const RTL = new Set(['ar', 'fa', 'ur']);
   const dirOf = l => (RTL.has(l) ? 'rtl' : 'ltr');
   const mmCode = c => (c === 'zh' ? 'zh-CN' : c);
 
@@ -68,7 +65,7 @@
   // تخزين محلي آمن (لا يتعطل إذا كان التخزين ممنوعاً)
   const store = {
     get(k, d) { try { const v = localStorage.getItem('lw_' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-    set(k, v) { try { localStorage.setItem('lw_' + k, JSON.stringify(v)); } catch { /* تجاهل */ } document.dispatchEvent(new CustomEvent('lw-store', { detail: k })); },
+    set(k, v) { try { localStorage.setItem('lw_' + k, JSON.stringify(v)); } catch { /* تجاهل */ } },
     del(k) { try { localStorage.removeItem('lw_' + k); } catch { /* تجاهل */ } }
   };
 
@@ -95,10 +92,7 @@
   const DEFAULTS = {
     src: 'en', tgt: 'ar', theme: 'auto', fontScale: 100, autoSpeak: false, rate: 0.9, voice: '',
     showExamples: true, maxExamples: 3, showSenses: true, showInflections: true,
-    useAI: true, cache: true, historyMax: 15, dailyGoal: 10,
-    // المترجم
-    tStyle: 'natural', tDomain: 'general', tEngine: 'auto', autoTranslate: true, privateMode: false, saveTrHistory: true,
-    convConfirm: true, convSpeak: true, convRate: 0.9
+    useAI: true, cache: true, historyMax: 15, dailyGoal: 10
   };
   let settings = { ...DEFAULTS, ...store.get('settings', {}) };
   const saveSettings = () => store.set('settings', settings);
@@ -110,9 +104,7 @@
     root.style.fontSize = settings.fontScale + '%';
     updateModeLine();
     updateThemeToggle();
-    settingsListeners.forEach(fn => { try { fn(); } catch { /* تجاهل */ } });
   }
-  const settingsListeners = [];
   const aiReady = () => !!settings.useAI;       // الشرح الذكي يعمل تلقائياً بلا أي إعداد
   function updateModeLine() {
     $('#modeLine').textContent = aiReady()
@@ -121,23 +113,15 @@
   }
 
   /* ---------- 3) النطق الصوتي ---------- */
-  function speak(text, lang, rate, onend) {
-    if (!('speechSynthesis' in window)) { toast('جهازك لا يدعم النطق الصوتي'); return false; }
-    text = String(text || '').trim();
-    if (!text) return false;
+  function speak(text, lang, rate) {
+    if (!('speechSynthesis' in window)) { toast('جهازك لا يدعم النطق الصوتي'); return; }
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.slice(0, 4000));
+    const u = new SpeechSynthesisUtterance(text);
     u.lang = (LANG[lang] && LANG[lang].voice) || lang;
     u.rate = Number(rate || settings.rate) || 0.9;
-    const voices = speechSynthesis.getVoices();
-    const pick = voices.find(v => v.name === settings.voice && v.lang.slice(0, 2) === lang.slice(0, 2));
+    const pick = speechSynthesis.getVoices().find(v => v.name === settings.voice && v.lang.slice(0, 2) === lang.slice(0, 2));
     if (pick) u.voice = pick;
-    else if (voices.length && !voices.some(v => v.lang.slice(0, 2).toLowerCase() === String(lang).slice(0, 2).toLowerCase())) {
-      toast('لا يوجد صوت لهذه اللغة على جهازك. ثبّت صوتها من إعدادات النظام.');
-    }
-    if (onend) { u.onend = onend; u.onerror = onend; }
     speechSynthesis.speak(u);
-    return true;
   }
   function loadVoices() {
     if (!('speechSynthesis' in window)) return;
@@ -148,21 +132,12 @@
   }
 
   /* ---------- 4) مصادر الترجمة والقاموس ---------- */
-  // بعض الخدمات تُرجع رموز HTML مثل &#39; داخل النص: نحوّلها إلى نص عادي
-  function decodeEntities(s) {
-    s = String(s || '');
-    if (!/&[#a-z0-9]+;/i.test(s)) return s;
-    try { return new DOMParser().parseFromString(s, 'text/html').documentElement.textContent || s; } catch { return s; }
-  }
   async function mmTranslate(text, src, tgt) {
     const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) +
       '&langpair=' + encodeURIComponent(mmCode(src) + '|' + mmCode(tgt));
     const d = await getJSON(url);
-    let main = d && d.responseData && d.responseData.translatedText;
-    // حدّ الاستخدام اليومي المجاني للخدمة: تأتي الرسالة داخل النص نفسه
-    if (typeof main === 'string' && /MYMEMORY WARNING|YOU USED ALL AVAILABLE/i.test(main)) { const e = new Error('quota'); e.code = 'quota'; throw e; }
-    if (!main || Number(d.responseStatus) !== 200) { const e = new Error('mm'); e.code = Number(d.responseStatus) === 429 ? 'quota' : 'mm'; throw e; }
-    main = decodeEntities(main);
+    const main = d && d.responseData && d.responseData.translatedText;
+    if (!main || Number(d.responseStatus) !== 200) throw new Error('mm');
     const seen = new Set([main.toLowerCase()]);
     const alts = [];
     for (const m of A(d.matches, 10)) {
@@ -486,7 +461,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
   const cKey = (t, s, g, mode) => `${s}|${g}|${t.toLowerCase()}|${mode}`;
   function cacheGet(k) { return settings.cache ? (store.get('cache2', { items: {} }).items || {})[k] || null : null; }
   function cacheSet(k, m) {
-    if (!settings.cache || settings.privateMode) return;
+    if (!settings.cache) return;
     const c = store.get('cache2', { order: [], items: {} });
     c.order = (c.order || []).filter(x => x !== k);
     c.order.push(k);
@@ -497,7 +472,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
   }
   function addHistory(text, src, tgt) {
     const max = Number(settings.historyMax);
-    if (!max || settings.privateMode) return;
+    if (!max) return;
     let hst = store.get('history', []).filter(x => !(x.text.toLowerCase() === text.toLowerCase() && x.src === src && x.tgt === tgt));
     hst.unshift({ text, src, tgt });
     store.set('history', hst.slice(0, max));
@@ -532,84 +507,31 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     return b;
   }
 
-  // إضافة عنصر إلى القاموس الشخصي من أي قسم (كلمة أو عبارة أو جملة)
-  function addFav(o) {
-    const f = { text: String(o.text || '').trim().slice(0, 1000), src: o.src, tgt: o.tgt, translation: String(o.translation || '').trim().slice(0, 2000),
-      ts: Date.now(), box: 0, due: Math.floor(Date.now() / 86400000), cat: o.cat || '', note: o.note || '', example: o.example || '' };
-    if (!f.text || !f.translation || !LANG[f.src] || !LANG[f.tgt]) return false;
-    const favs = getFavs();
-    if (favs.some(x => favKey(x) === favKey(f))) return false;
-    favs.unshift(f);
-    store.set('favs', favs.slice(0, 1000));
-    return true;
-  }
-  function removeFav(o) { store.set('favs', getFavs().filter(x => favKey(x) !== favKey(o))); }
-  const FAV_CATS = { study: 'دراسة', work: 'عمل', travel: 'سفر', other: 'أخرى' };
-
   function renderFavs() {
     const box = $('#favList');
     const q = clean($('#favFilter').value).toLowerCase();
-    const cat = $('#favCat').value;
-    const list = getFavs().filter(f => (!cat || (f.cat || '') === cat) &&
-      (!q || [f.text, f.translation, f.note, f.example].some(x => String(x || '').toLowerCase().includes(q))));
+    const list = getFavs().filter(f => !q || f.text.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q));
     if (!list.length) {
-      box.replaceChildren(h('p', { class: 'empty' }, q || cat ? 'لا توجد نتائج مطابقة.' : 'قاموسك الشخصي فارغ. اضغط النجمة بجانب أي ترجمة أو كلمة لحفظها هنا.'));
+      box.replaceChildren(h('p', { class: 'empty' }, q ? 'لا توجد نتائج مطابقة.' : 'لا توجد كلمات محفوظة بعد. ابحث عن كلمة ثم اضغط النجمة لحفظها.'));
       return;
     }
-    box.replaceChildren(...list.map(f => {
-      const editBox = h('div', { class: 'fav-edit', hidden: true });
-      const card = h('div', { class: 'card fav-card' });
-      const metaLine = () => h('div', { class: 'fav-meta' },
-        f.cat ? h('span', { class: 'tagpill' }, FAV_CATS[f.cat] || f.cat) : null,
-        f.note ? h('span', {}, f.note) : null,
-        f.example ? h('span', { dir: dirOf(f.src), lang: f.src, class: 'fav-ex' }, f.example) : null);
-      const catSel = h('select', { 'aria-label': 'التصنيف' }, h('option', { value: '' }, 'بدون تصنيف'),
-        Object.entries(FAV_CATS).map(([k, v]) => h('option', { value: k }, v)));
-      catSel.value = f.cat || '';
-      const noteIn = h('input', { type: 'text', maxlength: '200', placeholder: 'ملاحظة شخصية', 'aria-label': 'ملاحظة' });
-      noteIn.value = f.note || '';
-      const exIn = h('input', { type: 'text', maxlength: '300', placeholder: 'مثال', 'aria-label': 'مثال', dir: dirOf(f.src) });
-      exIn.value = f.example || '';
-      editBox.append(catSel, noteIn, exIn, h('button', { type: 'button', class: 'go', onclick: () => {
-        const favs = getFavs(), x = favs.find(y => favKey(y) === favKey(f));
-        if (x) { x.cat = catSel.value; x.note = noteIn.value.trim(); x.example = exIn.value.trim(); store.set('favs', favs); }
-        renderFavs();
-      } }, 'حفظ'));
-      card.append(
-        h('div', { class: 'fav' },
-          iconBtn('volume', 'نطق', () => speak(f.text, f.src)),
-          h('div', { class: 'txt' },
-            h('div', { class: 'w', dir: dirOf(f.src), lang: f.src }, f.text),
-            h('div', { class: 't', dir: dirOf(f.tgt), lang: f.tgt }, f.translation)),
-          iconBtn('dots', 'تعديل الملاحظة والتصنيف', () => { editBox.hidden = !editBox.hidden; }),
-          iconBtn('search', 'فتح', () => {
-            if (/\s/.test(f.text) || f.text.length > 40) { setLangs(f.src, f.tgt); showView('translate'); if (viewHooks.openInTranslator) viewHooks.openInTranslator(f.text); }
-            else { $('#srcLang').value = f.src; $('#tgtLang').value = f.tgt; $('#q').value = f.text; syncLangs(); showView('search'); doSearch(f.text); }
-          }),
-          iconBtn('trash', 'حذف', () => { removeFav(f); renderFavs(); })),
-        (f.cat || f.note || f.example) ? metaLine() : null,
-        editBox);
-      return card;
-    }));
+    box.replaceChildren(...list.map(f => h('div', { class: 'card fav' },
+      iconBtn('volume', 'نطق', () => speak(f.text, f.src)),
+      h('div', { class: 'txt' },
+        h('div', { class: 'w', dir: dirOf(f.src), lang: f.src }, f.text),
+        h('div', { class: 't', dir: dirOf(f.tgt), lang: f.tgt }, f.translation)),
+      iconBtn('search', 'فتح', () => { $('#srcLang').value = f.src; $('#tgtLang').value = f.tgt; $('#q').value = f.text; syncLangs(); showView('search'); doSearch(f.text); }),
+      iconBtn('trash', 'حذف', () => { store.set('favs', getFavs().filter(x => favKey(x) !== favKey(f))); renderFavs(); })
+    )));
   }
 
-  // تنزيل نص كملف (يُستخدم للتصدير في أكثر من قسم)
-  function downloadBlob(blob, name) {
-    const a = h('a', { href: URL.createObjectURL(blob), download: name });
+  function exportFavs() {
+    const blob = new Blob([JSON.stringify(getFavs(), null, 2)], { type: 'application/json' });
+    const a = h('a', { href: URL.createObjectURL(blob), download: 'languway-favorites.json' });
     document.body.append(a);
     a.click();
     a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  }
-  const csvCell = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-  function exportFavs(kind) {
-    if (kind === 'csv') {
-      const rows = [['النص', 'الترجمة', 'من', 'إلى', 'التصنيف', 'ملاحظة', 'مثال', 'تاريخ الحفظ']].concat(getFavs().map(f =>
-        [f.text, f.translation, f.src, f.tgt, FAV_CATS[f.cat] || '', f.note || '', f.example || '', new Date(f.ts || Date.now()).toISOString().slice(0, 10)]));
-      downloadBlob(new Blob(['﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), 'languway-dictionary.csv');
-    } else {
-      downloadBlob(new Blob([JSON.stringify(getFavs(), null, 2)], { type: 'application/json' }), 'languway-favorites.json');
-    }
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
   function importFavs(file) {
     if (!file || file.size > 2 * 1024 * 1024) { toast('الملف غير صالح أو كبير جداً'); return; }
@@ -622,8 +544,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
         const keys = new Set(favs.map(favKey));
         let added = 0;
         for (const x of arr.slice(0, 1000)) {
-          const f = { text: clean(x && x.text), src: S(x && x.src, 5), tgt: S(x && x.tgt, 5), translation: clean(x && x.translation), ts: Date.now(),
-            cat: FAV_CATS[x && x.cat] ? x.cat : '', note: S(x && x.note, 200), example: S(x && x.example, 300) };
+          const f = { text: clean(x && x.text), src: S(x && x.src, 5), tgt: S(x && x.tgt, 5), translation: clean(x && x.translation), ts: Date.now() };
           if (f.text && f.translation && LANG[f.src] && LANG[f.tgt] && !keys.has(favKey(f))) { favs.push(f); keys.add(favKey(f)); added++; }
         }
         store.set('favs', favs.slice(0, 1000));
@@ -722,8 +643,9 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
 
     // الكلمة في جمل
     if (settings.showExamples && m.examples.length) {
+      const maxExamples = Math.max(1, Math.min(5, Number(settings.maxExamples) || 3));
       card.append(section('الكلمة في جمل',
-        m.examples.slice(0, Math.max(Number(settings.maxExamples) || 3, 5)).map(x => {
+        m.examples.slice(0, maxExamples).map(x => {
           const lang = x.lang || m.src;
           const out = h('p', { class: 'ex-tr', dir: dirOf(m.tgt), hidden: !x.translation }, x.translation);
           return h('div', { class: 'ex' },
@@ -930,39 +852,14 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
   }
 
   /* ---------- 8) البحث ---------- */
-  // \u0643\u0644\u0645\u0627\u062A \u0634\u0627\u0626\u0639\u0629 \u0644\u0643\u0644 \u0644\u063A\u0629 \u0644\u0627\u062A\u064A\u0646\u064A\u0629 (\u0644\u0644\u062A\u0645\u064A\u064A\u0632 \u0628\u064A\u0646 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629 \u0648\u0627\u0644\u0641\u0631\u0646\u0633\u064A\u0629 \u0648\u0627\u0644\u0625\u0633\u0628\u0627\u0646\u064A\u0629\u2026)
-  const STOP = {
-    en: 'the and is are to of in that it for you with this have was not on be at as i he she we they what your will can',
-    fr: 'le la les de des et est un une que pour dans pas vous je nous ce qui sur avec ne se au du il elle sont mais',
-    es: 'el la los las de que y en un una es por con para no se lo como m\u00E1s pero su al del est\u00E1 son muy yo',
-    de: 'der die das und ist nicht ich ein eine zu den mit f\u00FCr auf sie es von dem sich auch wir aber wie sind',
-    it: 'il lo la gli di che e \u00E8 un una per non con sono mi ti del della ma pi\u00F9 come anche questo io',
-    pt: 'o os as de que e \u00E9 um uma para com n\u00E3o se em do da voc\u00EA mais como mas est\u00E1 s\u00E3o eu isso',
-    tr: 've bir bu i\u00E7in ile de da \u00E7ok ne ama ben sen mi var gibi daha de\u011Fil bunu onu ki'
-  };
-  const STOPSET = Object.fromEntries(Object.entries(STOP).map(([k, v]) => [k, new Set(v.split(' '))]));
-  const DIAC = { es: /[\u00F1\u00BF\u00A1]/g, pt: /[\u00E3\u00F5]/g, de: /[\u00E4\u00F6\u00FC\u00DF]/g, tr: /[\u011F\u015F\u0131\u0130]/g, fr: /[\u00E8\u00EA\u00EB\u00E0\u00E2\u00F9\u00FB\u0153\u00EE\u00F4]/g, it: /[\u00EC\u00F2]/g };
-  // \u0643\u0634\u0641 \u0627\u0644\u0644\u063A\u0629 \u0645\u0646 \u0627\u0644\u0643\u062A\u0627\u0628\u0629 \u0646\u0641\u0633\u0647\u0627: \u062D\u0633\u0628 \u0627\u0644\u0623\u0628\u062C\u062F\u064A\u0629 \u062B\u0645 \u0627\u0644\u0643\u0644\u0645\u0627\u062A \u0627\u0644\u0634\u0627\u0626\u0639\u0629 (\u0628\u0644\u0627 \u0625\u0646\u062A\u0631\u0646\u062A)
-  function detect(t, fallback = 'en') {
-    t = String(t || '');
-    if (/[\u0600-\u06FF]/.test(t)) {
-      if (/[\u0679\u0688\u0691\u06BA\u06D2\u06BE]/.test(t)) return 'ur';
-      if (/[\u067E\u0686\u0698\u06AF]/.test(t) && /[\u06CC\u06A9]/.test(t)) return 'fa';
-      if (/[\u067E\u0686\u0698\u06AF]/.test(t)) return 'fa';
-      return 'ar';
-    }
+  function detect(t) {
+    if (/[\u0600-\u06FF]/.test(t)) return 'ar';
     if (/[\u0400-\u04FF]/.test(t)) return 'ru';
     if (/[\u3040-\u30FF]/.test(t)) return 'ja';
     if (/[\uAC00-\uD7AF]/.test(t)) return 'ko';
     if (/[\u4E00-\u9FFF]/.test(t)) return 'zh';
     if (/[\u0900-\u097F]/.test(t)) return 'hi';
-    const words = t.toLowerCase().match(/[\p{L}']+/gu) || [];
-    if (!words.length) return fallback;
-    const score = {};
-    for (const [lg, set] of Object.entries(STOPSET)) score[lg] = words.reduce((n, w) => n + (set.has(w) ? 1 : 0), 0);
-    for (const [lg, re] of Object.entries(DIAC)) score[lg] = (score[lg] || 0) + 2 * ((t.match(re) || []).length);
-    const best = Object.entries(score).sort((a, b) => b[1] - a[1])[0];
-    return best && best[1] > 0 ? best[0] : (words.length <= 2 ? fallback : 'en');
+    return 'en';
   }
 
   let seq = 0;
@@ -1008,35 +905,18 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     }
   }
 
-  // زوجا اختيار اللغة: القاموس (srcLang/tgtLang) والمترجم (tSrc/tTgt) يبقيان متزامنين دائماً
-  const LANG_PAIRS = [['#srcLang', '#tgtLang'], ['#tSrc', '#tTgt'], ['#iSrc', '#iTgt'], ['#fSrc', '#fTgt'], ['#vSrc', '#vTgt']];
-  const langListeners = [];
   function fillLangSelects() {
     const mk = (withAuto) => [withAuto && h('option', { value: 'auto' }, 'كشف تلقائي'),
       ...LANGS.map(([c, n]) => h('option', { value: c }, n))];
-    for (const [a, b] of LANG_PAIRS) {
-      if (!$(a) || !$(b)) continue;
-      $(a).replaceChildren(...mk(true).filter(Boolean));
-      $(b).replaceChildren(...mk(false).filter(Boolean));
-    }
-    applyLangs();
+    $('#srcLang').replaceChildren(...mk(true).filter(Boolean));
+    $('#tgtLang').replaceChildren(...mk(false).filter(Boolean));
+    $('#srcLang').value = settings.src;
+    $('#tgtLang').value = settings.tgt;
   }
-  function applyLangs() {
-    for (const [a, b] of LANG_PAIRS) { if ($(a)) $(a).value = settings.src; if ($(b)) $(b).value = settings.tgt; }
-  }
-  // يضبط اللغتين في كل مكان ويحفظهما ويُعلم بقية الأقسام
-  function setLangs(src, tgt) {
-    if (src && (src === 'auto' || LANG[src])) settings.src = src;
-    if (tgt && LANG[tgt]) settings.tgt = tgt;
+  function syncLangs() {
+    settings.src = $('#srcLang').value;
+    settings.tgt = $('#tgtLang').value;
     saveSettings();
-    applyLangs();
-    langListeners.forEach(fn => { try { fn(settings.src, settings.tgt); } catch { /* تجاهل */ } });
-  }
-  function syncLangs() { setLangs($('#srcLang').value, $('#tgtLang').value); }
-
-  function swapLangs() {
-    const s = settings.src === 'auto' ? 'en' : settings.src;
-    setLangs(settings.tgt, s);
   }
 
   /* ---------- 9) الاختبار ---------- */
@@ -1113,37 +993,14 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
   }
 
   /* ---------- 10) التنقل بين الأقسام ---------- */
-  // مجموعات الأقسام: شريط التنقل السفلي يُظهر المجموعة، وشرائح علوية تنقل بين أقسامها
-  const VIEW_GROUP = { translate: 'home', search: 'favs', favs: 'favs', history: 'favs', quiz: 'favs', cards: 'favs',
-    profile: 'profile', dash: 'profile', settings: 'profile', install: 'profile',
-    about: 'page', privacy: 'page', terms: 'page', faq: 'page', contact: 'page' };
-  const SEGMENTS = {
-    fav: [['favs', 'المفضلة'], ['history', 'السجل'], ['search', 'القاموس'], ['quiz', 'اختبار'], ['cards', 'بطاقات المراجعة']],
-    me: [['profile', 'ملفي'], ['dash', 'لوحتي'], ['settings', 'الإعدادات'], ['install', 'التثبيت والمشاركة']]
-  };
-  const viewHooks = {};                                   // يسجّلها translator.js و media.js
-  function buildSegments() {
-    $$('.seg[data-group]').forEach(box => {
-      const view = box.closest('.view').dataset.view;
-      box.replaceChildren(...SEGMENTS[box.dataset.group].map(([v, t]) =>
-        h('button', { type: 'button', class: 'seg-b', 'aria-selected': String(v === view), onclick: () => showView(v) }, t)));
-    });
-  }
   function showView(name) {
-    if (!VIEW_GROUP[name]) name = 'translate';
     $$('.view').forEach(v => { v.hidden = v.dataset.view !== name; });
-    $$('[data-nav]').forEach(t => {
-      const nv = t.dataset.nav;
-      const on = nv === 'translate' ? false : VIEW_GROUP[name] === (nv === 'home' ? 'home' : nv);
-      t.setAttribute('aria-selected', String(on));
-    });
+    $$('[data-nav]').forEach(t => t.setAttribute('aria-selected', String(t.dataset.nav === name)));
     if (name === 'favs') renderFavs();
     if (name === 'quiz') renderQuizHome();
     if (name === 'dash') renderDash();
     if (name === 'cards') renderCards();
     if (name === 'install') updateInstallUI();
-    if (name === 'search' && !$('#q').value) $('#q').focus({ preventScroll: true });
-    if (viewHooks[name]) { try { viewHooks[name](); } catch (e) { console.error('view', name, e && e.message); } }
     window.scrollTo(0, 0);
   }
 
@@ -1190,7 +1047,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     ta.remove();
   }
   async function shareText(text, url) {
-    const data = { title: 'Languway Translator', text, url: url || shareUrl() };
+    const data = { title: 'Languway', text, url: url || shareUrl() };
     if (navigator.share) {
       try { await navigator.share(data); } catch (e) { if (e && e.name !== 'AbortError') copyText(`${text} ${data.url}`); }
     } else { copyText(`${text} ${data.url}`); }
@@ -1224,8 +1081,10 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     const b = $('#themeToggle');
     if (!b) return;
     b.setAttribute('aria-checked', String(isDark()));
+    const nu = $('#navTheme use');
+    if (nu) nu.setAttribute('href', isDark() ? '#i-sun' : '#i-moon');
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', isDark() ? '#07122B' : '#0B2257');
+    if (meta) meta.setAttribute('content', isDark() ? '#070D20' : '#1B2FA8');
   }
   function toggleTheme() {
     settings.theme = isDark() ? 'light' : 'dark';
@@ -1294,7 +1153,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
       const bar = h('i', { title: String(n) });
       bar.style.height = Math.max(4, Math.round(n / max * 90)) + 'px';
       cols.push(h('div', { class: 'bar-col' + (i === 0 ? ' today' : '') }, bar,
-        h('span', {}, d.toLocaleDateString(document.documentElement.lang, { weekday: 'short' }))));
+        h('span', {}, d.toLocaleDateString('ar', { weekday: 'short' }))));
     }
 
     // كلمة اليوم
@@ -1325,7 +1184,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
         stat('target', (store.get('best', 0)) + '٪', 'أفضل نتيجة اختبار')),
       wcard,
       h('div', { class: 'card' }, h('h2', { class: 'h2 flush' }, 'نشاطك هذا الأسبوع'), h('div', { class: 'week' }, cols)),
-      isStandalone() ? null : h('button', { class: 'go wide', type: 'button', onclick: () => showView('install') }, icon('download'), 'ثبّت Languway Translator على جهازك'));
+      isStandalone() ? null : h('button', { class: 'go wide', type: 'button', onclick: () => showView('install') }, icon('download'), 'ثبّت Languway على جهازك'));
   }
 
   /* ---------- 12.8) بطاقات المراجعة بنظام التكرار المتباعد (SRS) ---------- */
@@ -1382,7 +1241,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
   }
 
   /* ---------- 12.9) تحميل للعمل بدون إنترنت (زر بتقدّم دائري) ---------- */
-  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'translator.js', 'media.js', 'app.js', 'i18n.js', 'i18n-en.js', 'i18n-fr.js', 'i18n-es.js', 'i18n-de.js', 'i18n-tr.js', 'i18n-ru.js', 'vendor/jszip.min.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'og-image.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
+  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'og-image.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
   let offlineAbort = null;
   async function prepareOffline() {
     const btn = $('#offlineBtn');
@@ -1393,7 +1252,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     btn.dataset.state = 'run';
     let done = 0;
     try {
-      const cache = await caches.open('languway-v7');
+      const cache = await caches.open('languway-v5');
       for (const f of SHELL_FILES) {
         if (offlineAbort) break;
         try { const r = await fetch(f, { cache: 'reload' }); if (r.ok) await cache.put(f, r); } catch { /* ملف اختياري */ }
@@ -1413,6 +1272,43 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
 
   /* ---------- 12.10) أدوات الواجهة ---------- */
   // نص متحرك في خانة البحث (يتوقف عند الكتابة)
+  function typewriterPlaceholder() {
+    const q = $('#q');
+    const words = ['hello', 'مرحباً', 'bonjour', 'knowledge', 'اشتياق', 'journey'];
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let wi = 0, ci = 0, del = false;
+    const tick = () => {
+      if (document.activeElement !== q && !q.value) {
+        const w = words[wi];
+        ci += del ? -1 : 1;
+        q.placeholder = w.slice(0, ci) + (ci % 2 ? '|' : '');
+        if (!del && ci >= w.length) { del = true; return setTimeout(tick, 1100); }
+        if (del && ci <= 0) { del = false; wi = (wi + 1) % words.length; }
+      } else { q.placeholder = 'اكتب كلمة أو جملة…'; }
+      setTimeout(tick, del ? 60 : 110);
+    };
+    tick();
+  }
+
+  function initPanel() {
+    const panel = $('#panel');
+    const setCollapsed = c => {
+      panel.classList.toggle('collapsed', c);
+      $('#panelToggle').setAttribute('aria-expanded', String(!c));
+      $('#panelToggle').setAttribute('aria-label', c ? 'توسيع القائمة' : 'طي القائمة');
+      store.set('panelCollapsed', c);
+    };
+    setCollapsed(!!store.get('panelCollapsed', false));
+    $('#panelToggle').addEventListener('click', () => setCollapsed(!panel.classList.contains('collapsed')));
+    $('#panelSearch').addEventListener('submit', e => {
+      e.preventDefault();
+      const t = clean($('#panelQ').value);
+      if (!t) { setCollapsed(false); $('#panelQ').focus(); return; }
+      $('#q').value = t; $('#clearQ').hidden = false; showView('search'); doSearch(t); $('#panelQ').value = '';
+    });
+    $('#panelSearch').addEventListener('click', () => { if (panel.classList.contains('collapsed')) { setCollapsed(false); $('#panelQ').focus(); } });
+  }
+
   /* ---------- 12.95) الشاشة الرئيسية قبل البحث ---------- */
   function renderHome() {
     const samples = [['hello', 'en', 'ar'], ['thank you', 'en', 'ar'], ['knowledge', 'en', 'ar'], ['مرحباً', 'ar', 'en'], ['كتاب', 'ar', 'en'], ['bonjour', 'fr', 'ar']];
@@ -1426,9 +1322,9 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
         tile('translate', 'جمل وتصريفات', 'أمثلة متعددة وأزمنة الأفعال والجمع'),
         tile('volume', 'نطق صوتي', 'استمع للكلمات والجمل بوضوح'),
         tile('quiz', 'اختبارات وبطاقات', 'راجع ما حفظته وثبّت التعلّم')),
-      h('h2', { class: 'h2' }, 'لماذا Languway Translator؟'),
+      h('h2', { class: 'h2' }, 'لماذا Languway؟'),
       h('div', { class: 'card cmp-wrap' }, h('table', { class: 'cmp' }, h('tbody', {},
-        [['الميزة', 'مترجم تقليدي', 'Languway Translator'],
+        [['الميزة', 'مترجم تقليدي', 'Languway'],
          ['الهدف', 'نقل المعنى سريعاً', 'التعليم وفهم السياق'],
          ['التحليل', 'جملة ككتلة واحدة', 'تفكيك كل كلمة وشرح القاعدة'],
          ['النطق', 'سرعة واحدة', 'عادي وبطيء + تقييم نطقك'],
@@ -1451,18 +1347,20 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     $('#clearQ').addEventListener('click', () => { $('#q').value = ''; $('#clearQ').hidden = true; $('#q').focus(); });
     $('#srcLang').addEventListener('change', syncLangs);
     $('#tgtLang').addEventListener('change', syncLangs);
-    $('#swapBtn').addEventListener('click', swapLangs);
-    $('#tSrc').addEventListener('change', () => setLangs($('#tSrc').value, $('#tTgt').value));
-    $('#tTgt').addEventListener('change', () => setLangs($('#tSrc').value, $('#tTgt').value));
+    $('#swapBtn').addEventListener('click', () => {
+      const s = $('#srcLang').value === 'auto' ? 'en' : $('#srcLang').value;
+      $('#srcLang').value = $('#tgtLang').value;
+      $('#tgtLang').value = s;
+      syncLangs();
+    });
 
     $$('[data-nav]').forEach(t => t.addEventListener('click', () => {
-      const nv = t.dataset.nav;
-      showView(nv === 'home' || nv === 'translate' ? 'translate' : nv);
-      if (nv === 'translate') { const ti = $('#tIn'); if (ti) { ti.scrollIntoView({ block: 'center', behavior: 'smooth' }); ti.focus({ preventScroll: true }); } }
-      const nav = $('#glassNav');
-      if (nav) { nav.classList.remove('sweep'); void nav.offsetWidth; nav.classList.add('sweep'); }
+      showView(t.dataset.nav);
+      const nav = $('#glassNav');                       // لمعة الزجاج السائل
+      nav.classList.remove('sweep'); void nav.offsetWidth; nav.classList.add('sweep');
     }));
     $('#themeToggle').addEventListener('click', toggleTheme);
+    $('#navTheme').addEventListener('click', toggleTheme);
     // تموّج دائري عند لمس عناصر الزجاج السائل
     $$('.g-item').forEach(b => b.addEventListener('pointerdown', e => {
       const r = b.getBoundingClientRect();
@@ -1479,16 +1377,16 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
       try { const t = await navigator.clipboard.readText(); $('#q').value = clean(t); $('#clearQ').hidden = !$('#q').value; $('#q').focus(); }
       catch { toast('اسمح بالوصول إلى الحافظة أو الصق يدوياً'); }
     });
-        $('#favFilter').addEventListener('input', renderFavs);
-    $('#favCat').addEventListener('change', renderFavs);
-    $('#favExport').addEventListener('click', () => exportFavs('json'));
-    $('#favExportCsv').addEventListener('click', () => exportFavs('csv'));
+    initPanel();
+    typewriterPlaceholder();
+    $('#favFilter').addEventListener('input', renderFavs);
+    $('#favExport').addEventListener('click', exportFavs);
     $('#favImport').addEventListener('click', () => $('#importFile').click());
     $('#importFile').addEventListener('change', e => { importFavs(e.target.files[0]); e.target.value = ''; });
 
     $('#btnInstallTop').addEventListener('click', doInstall);
     $('#btnInstall').addEventListener('click', doInstall);
-    $('#btnShare').addEventListener('click', () => shareText('جرّب Languway Translator — مترجم ومعلّم لغوي:'));
+    $('#btnShare').addEventListener('click', () => shareText('جرّب Languway — مترجم ومعلّم لغوي:'));
     $('#btnCopy').addEventListener('click', () => copyText(shareUrl()));
     $('#shareUrl').textContent = shareUrl();
     $('#qrImg').addEventListener('error', () => { $('#qrImg').hidden = true; $('#qrDownload').hidden = true; $('#qrMissing').hidden = false; });
@@ -1501,7 +1399,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     });
     $('#clrFavs').addEventListener('click', () => confirmThen('حذف كل الكلمات المحفوظة؟', () => { store.del('favs'); store.del('best'); toast('تم حذف المفضلة'); }));
     $('#resetAll').addEventListener('click', () => confirmThen('إعادة ضبط كل الإعدادات والبيانات؟', () => {
-      ['settings', 'history', 'cache2', 'favs', 'best', 'thist', 'stats', 'offline', 'tExpand', 'uiLang', 'profile'].forEach(store.del);
+      ['settings', 'history', 'cache2', 'favs', 'best'].forEach(store.del);
       location.reload();
     }));
 
@@ -1521,9 +1419,8 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     if (sp) setTimeout(() => { sp.classList.add('hide'); setTimeout(() => sp.remove(), 700); }, 1500);
 
     // اختصارات من manifest (?view=favs)
-    buildSegments();
     const v = new URLSearchParams(location.search).get('view');
-    showView(VIEW_GROUP[v] ? v : 'translate');
+    if (['dash', 'favs', 'quiz', 'cards', 'install', 'settings'].includes(v)) showView(v);
 
     // تسجيل Service Worker (يُفعّل التثبيت والعمل بدون إنترنت)
     if ('serviceWorker' in navigator && window.isSecureContext) {
@@ -1541,14 +1438,5 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     }
   }
 
-  // واجهة مشتركة مع translator.js و media.js (تُحمَّلان بعد هذا الملف؛ وتبدأ التهيئة بعد تحميل الكل)
-  window.LW = {
-    $, $$, h, icon, iconBtn, store, toast, getJSON, clean, S, A, LANGS, LANG, RTL, dirOf, mmCode, fold, detect, parseJSON,
-    smartChat, mmTranslate, decodeEntities, speak, copyText, shareText, downloadBlob, csvCell, showView, viewHooks,
-    settings: () => settings, saveSettings, setLangs, swapLangs, onLangs: fn => langListeners.push(fn), onSettings: fn => settingsListeners.push(fn),
-    fav: { list: getFavs, has: m => isFav(m), add: addFav, remove: removeFav, key: favKey },
-    dictSearch: (t, a, b) => { setLangs(a, b); $('#q').value = t; $('#clearQ').hidden = !t; showView('search'); doSearch(t); },
-    confirmThen, FAV_CATS, track: trackSearch, applySettings
-  };
-  document.addEventListener('DOMContentLoaded', init);
+  init();
 })();

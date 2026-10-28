@@ -1,12 +1,12 @@
 /* ==========================================================
-   Languway Translator — Service Worker
+   Languway — Service Worker
    - الواجهة: تُخزَّن عند التثبيت وتعمل بدون إنترنت
    - ملفات الموقع: تُحدَّث في الخلفية (stale-while-revalidate)
    - نتائج الترجمة والقاموس: الشبكة أولاً ثم آخر نسخة محفوظة
    ========================================================== */
-const VERSION = 'languway-v7';
+const VERSION = 'languway-v5';
 const API_CACHE = 'languway-api';
-const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'translator.js', 'media.js', 'app.js', 'i18n.js', 'i18n-en.js', 'i18n-fr.js', 'i18n-es.js', 'i18n-de.js', 'i18n-tr.js', 'i18n-ru.js', 'vendor/jszip.min.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-192.png', 'icon-maskable-512.png'];
+const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-192.png', 'icon-maskable-512.png'];
 const API_HOSTS = ['api.mymemory.translated.net', 'api.dictionaryapi.dev', 'en.wiktionary.org', 'ar.wiktionary.org', 'tatoeba.org'];
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 

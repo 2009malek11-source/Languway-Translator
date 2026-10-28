@@ -1,104 +1,32 @@
 {
-  "name": "Languway Translator",
+  "name": "مترجم Languway",
   "short_name": "Languway",
-  "description": "Languway Translator — ترجمة النصوص والصور والمستندات والصوت والمحادثات بين عشرات اللغات، مع مساعد ذكي وسجل ومفضلة تبقى على جهازك.",
+  "description": "مترجم ومعلّم لغوي تفاعلي: المعنى والجمل والتصريفات والاختبارات والنطق.",
   "lang": "ar",
   "dir": "rtl",
   "id": "./index.html",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "display_override": [
-    "standalone",
-    "fullscreen"
-  ],
+  "display_override": ["standalone", "fullscreen"],
   "orientation": "any",
-  "background_color": "#F1F4F9",
-  "theme_color": "#0B2257",
-  "categories": [
-    "productivity",
-    "utilities",
-    "education"
-  ],
+  "background_color": "#F3F7FF",
+  "theme_color": "#1B2FA8",
+  "categories": ["education", "productivity"],
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-maskable-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "screenshots": [
-    {
-      "src": "screenshot-narrow-1.png",
-      "sizes": "540x960",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "الترجمة الفورية"
-    },
-    {
-      "src": "screenshot-narrow-2.png",
-      "sizes": "540x960",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "ترجمة المستندات"
-    },
-    {
-      "src": "screenshot-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "المترجم بثلاثة أعمدة"
-    }
+    { "src": "screenshot-narrow-1.png", "sizes": "540x960", "type": "image/png", "form_factor": "narrow", "label": "الترجمة والشرح التعليمي" },
+    { "src": "screenshot-narrow-2.png", "sizes": "540x960", "type": "image/png", "form_factor": "narrow", "label": "لوحة التقدم وكلمة اليوم" },
+    { "src": "screenshot-wide.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "النسخة الكبيرة مع القائمة الجانبية" }
   ],
   "shortcuts": [
-    {
-      "name": "ترجمة نص",
-      "url": "./index.html",
-      "icons": [
-        {
-          "src": "icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "المفضلة",
-      "url": "./index.html?view=favs",
-      "icons": [
-        {
-          "src": "icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "الملف الشخصي",
-      "url": "./index.html?view=profile",
-      "icons": [
-        {
-          "src": "icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    }
+    { "name": "لوحتي", "url": "./index.html?view=dash", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "المفضلة", "url": "./index.html?view=favs", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "اختبار سريع", "url": "./index.html?view=quiz", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
   ]
 }
