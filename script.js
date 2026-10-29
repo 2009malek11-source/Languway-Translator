@@ -113,15 +113,18 @@
   }
 
   /* ---------- 3) النطق الصوتي ---------- */
-  function speak(text, lang, rate) {
-    if (!('speechSynthesis' in window)) { toast('جهازك لا يدعم النطق الصوتي'); return; }
-    speechSynthesis.cancel();
+  function utter(text, lang, rate) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = (LANG[lang] && LANG[lang].voice) || lang;
     u.rate = Number(rate || settings.rate) || 0.9;
     const pick = speechSynthesis.getVoices().find(v => v.name === settings.voice && v.lang.slice(0, 2) === lang.slice(0, 2));
     if (pick) u.voice = pick;
-    speechSynthesis.speak(u);
+    return u;
+  }
+  function speak(text, lang, rate) {
+    if (!('speechSynthesis' in window)) { toast('جهازك لا يدعم النطق الصوتي'); return; }
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter(text, lang, rate));
   }
   function loadVoices() {
     if (!('speechSynthesis' in window)) return;
@@ -150,7 +153,7 @@
       const seg = S(x && x.segment, 300), trn = S(x && x.translation, 300);
       if (seg && trn && seg.length > text.length + 8 && seg.length < 170 && fold(seg).includes(fold(text))) ctx.push({ text: seg, translation: trn });
     }
-    return { main: S(main, 600), alts: alts.slice(0, 4), ctx: ctx.slice(0, 4) };
+    return { main: S(main, 1500), alts: alts.slice(0, 4), ctx: ctx.slice(0, 4) };
   }
 
   async function dictLookup(word) {
@@ -398,23 +401,55 @@
     if (a < 0 || b < a) throw new Error('parse');
     return JSON.parse(t.slice(a, b + 1));
   }
-  async function smartChat(prompt, ms = 30000) {
-    const body = JSON.stringify({ model: 'openai', temperature: 0.3, private: true, messages: [{ role: 'user', content: prompt }] });
-    try {
-      const d = await getJSON('https://text.pollinations.ai/openai', { method: 'POST', headers: { 'content-type': 'application/json' }, body }, ms);
-      const t = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-      if (typeof t === 'string' && t) return t.slice(0, 12000);
-    } catch { /* نجرب الطريقة الثانية */ }
-    const c = new AbortController();
-    const tm = setTimeout(() => c.abort(), ms);
-    try {
-      const r = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt) + '?model=openai&private=true', { signal: c.signal });
-      if (!r.ok) throw new Error('http');
-      const t = await r.text();
-      if (!t) throw new Error('empty');
-      return t.slice(0, 12000);
-    } finally { clearTimeout(tm); }
-  }
+  /* عميل الذكاء الاصطناعي: بوابة واحدة لكل الطلبات. الخدمة المجانية تسمح بطلب واحد في كل مرة وبينها نحو 30 ثانية،
+     لذلك الطلبات تُصفّ في طابور، وعند رفض مؤقت (402/429) ننتظر المدة التي تحددها الخدمة ثم نعيد المحاولة مرة واحدة. */
+  const ai = (() => {
+    const URL_ = 'https://text.pollinations.ai/openai';
+    const GAP = 31000;                       // أقل فاصل بين طلبين
+    let chain = Promise.resolve(), last = 0;
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    function err(code, status) { const e = new Error(code); e.code = code; e.status = status || 0; return e; }
+    async function post(messages, withModel, ms) {
+      const c = new AbortController();
+      const t = setTimeout(() => c.abort(), ms);
+      try {
+        const body = { temperature: 0.3, private: true, messages };
+        if (withModel) body.model = 'openai';
+        let r;
+        try { r = await fetch(URL_, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: c.signal }); }
+        catch (e) { throw err(c.signal.aborted ? 'timeout' : 'network'); }
+        if (!r.ok) { const e = err('http', r.status); e.retry = Math.min(60, Math.max(0, parseInt(r.headers.get('retry-after'), 10) || 0)); throw e; }
+        let d;
+        try { d = await r.json(); } catch { throw err('parse'); }
+        const m = d && d.choices && d.choices[0] && d.choices[0].message;
+        const txt = m && typeof m.content === 'string' ? m.content.trim() : '';
+        if (!txt) throw err('empty');
+        return txt.slice(0, 20000);
+      } finally { clearTimeout(t); }
+    }
+    async function run(messages, ms) {
+      const gap = last + GAP - Date.now();
+      if (last && gap > 0) await sleep(gap);
+      let withModel = true, waited = false;
+      for (;;) {
+        last = Date.now();
+        try { return await post(messages, withModel, ms); }
+        catch (e) {
+          if (e.code === 'http' && withModel && [400, 404, 422].includes(e.status)) { withModel = false; continue; }
+          if (e.code === 'http' && (e.status === 402 || e.status === 429) && !waited) { waited = true; await sleep((e.retry || 30) * 1000 + 500); continue; }
+          throw e;
+        }
+      }
+    }
+    return {
+      ask(messages, ms = 60000) {
+        const p = chain.then(() => run(messages, ms));
+        chain = p.catch(() => {});
+        return p;
+      },
+      text(prompt, ms) { return this.ask([{ role: 'user', content: prompt }], ms); }
+    };
+  })();
   async function buildAI(text, src, tgt) {
     const L = LANG[src].name, T = LANG[tgt].name;
     const prompt = `You are an expert language teacher. The learner's interface language is Arabic.
@@ -423,7 +458,7 @@ Explain THIS ${L} text itself, not only its translation. Translations go into ${
 Return ONLY one valid JSON object, no markdown, with exactly these keys:
 {"pronunciation":"IPA or romanization","pos":"part of speech in Arabic","definition":"clear dictionary-style definition of the typed text, in Arabic","definitionSource":"the same definition in simple ${L}","translation":"best translation into ${T}","alternatives":["other valid translations"],"explanation":"how and when it is used, in Arabic, 2-4 sentences","senses":[{"meaning":"Arabic explanation of this sense","gloss":"short ${L} synonym or paraphrase","translation":"${T} equivalent","hint":"how to recognise this sense from the sentence, in Arabic","example":"${L} sentence that contains the typed text","exampleTranslation":"its ${T} translation"}],"examples":[{"text":"${L} sentence that contains the typed text","translation":"its ${T} translation"}],"tenses":[{"label":"Arabic name of the tense or form","form":"the conjugated form","example":"${L} sentence using that form","exampleTranslation":"its ${T} translation"}],"inflections":[{"label":"Arabic label","form":"the form"}],"synonyms":["synonyms in ${L}"],"antonyms":["antonyms in ${L}"],"variants":[{"region":"country or dialect name in Arabic","form":"regional word or phrase"}],"notes":"one short learning tip in Arabic"}
 Rules: give every distinct meaning (up to 6 senses); give 6 varied example sentences (statement, question, negative, formal, casual) and each must literally contain the typed text or an inflected form; tenses = every main tense of the verb in ${L} (for Arabic: الماضي والمضارع والأمر مع الضمائر), or an empty array if the text is not a verb; inflections = plural, gender, comparative etc., or empty; variants = regional differences (Spain vs Latin America, UK vs US, Arabic dialects) or empty.`;
-    const j = parseJSON(await smartChat(prompt, 35000));
+    const j = parseJSON(await ai.text(prompt, 90000));
     const m = baseModel('ai', text, src, tgt);
     m.translation = S(j.translation, 600);
     if (!m.translation && !A(j.senses, 1).length) throw new Error('empty');
@@ -525,14 +560,14 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     )));
   }
 
-  function exportFavs() {
-    const blob = new Blob([JSON.stringify(getFavs(), null, 2)], { type: 'application/json' });
-    const a = h('a', { href: URL.createObjectURL(blob), download: 'languway-favorites.json' });
+  function downloadBlob(blob, name) {
+    const a = h('a', { href: URL.createObjectURL(blob), download: name });
     document.body.append(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
+  const exportFavs = () => downloadBlob(new Blob([JSON.stringify(getFavs(), null, 2)], { type: 'application/json' }), 'languway-favorites.json');
   function importFavs(file) {
     if (!file || file.size > 2 * 1024 * 1024) { toast('الملف غير صالح أو كبير جداً'); return; }
     const r = new FileReader();
@@ -702,7 +737,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
   }
 
   /* ---------- 7.5) تفكيك الجملة، تقييم النطق ---------- */
-  const aiCall = async prompt => parseJSON(await smartChat(prompt));
+  const aiCall = async prompt => parseJSON(await ai.text(prompt, 90000));
   const stripPunct = w => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
 
   // بطاقة شرح كلمة داخل الجملة
@@ -877,10 +912,9 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     const text = clean(raw);
     if (!text) return;
     const id = ++seq;
-    let src = $('#srcLang').value;
-    let tgt = $('#tgtLang').value;
-    if (src === 'auto') src = detect(text);
-    if (src === tgt) tgt = src === 'ar' ? 'en' : 'ar';
+    const { src, tgt } = pickLangs(text);
+    hideLong();
+    syncQ();
 
     renderSkeleton();
     let m = (aiReady() && cacheGet(cKey(text, src, tgt, 'ai'))) || cacheGet(cKey(text, src, tgt, 'f'));
@@ -917,6 +951,289 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     settings.src = $('#srcLang').value;
     settings.tgt = $('#tgtLang').value;
     saveSettings();
+  }
+
+  /* ---------- 8.5) مساحة الكتابة الكبيرة: نصوص طويلة، إملاء صوتي، كاميرا ---------- */
+  const MAX_LONG = 5000;
+  const isShort = t => t.length <= 300 && !t.includes('\n');
+  // نحافظ على الأسطر والفقرات (على عكس clean المخصصة للكلمات والجمل)
+  const cleanLong = s => String(s ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
+    .replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAX_LONG);
+  const utf8Len = s => new TextEncoder().encode(s).length;
+
+  function syncQ() {
+    const q = $('#q');
+    $('#qCount').textContent = `${q.value.length.toLocaleString('en-US')} / ${MAX_LONG.toLocaleString('en-US')}`;
+    $('#clearQ').hidden = !q.value;
+    q.style.height = 'auto';                                   // تكبر المساحة مع النص حتى 60٪ من الشاشة
+    q.style.height = Math.min(q.scrollHeight, Math.round(innerHeight * 0.6)) + 'px';
+  }
+  function pickLangs(text) {
+    let src = $('#srcLang').value;
+    let tgt = $('#tgtLang').value;
+    if (src === 'auto') src = detect(text);
+    if (src === tgt) tgt = src === 'ar' ? 'en' : 'ar';
+    return { src, tgt };
+  }
+  // نقطة الدخول الوحيدة للترجمة: الكلمات والجمل القصيرة بالشرح الكامل، والنصوص الطويلة بالترجمة المتتابعة
+  function translateNow(raw) {
+    const text = cleanLong(raw);
+    if (!text) { toast('اكتب نصاً أولاً'); return; }
+    if (isShort(text)) doSearch(text); else doLong(text);
+  }
+
+  // تقسيم النص إلى أجزاء لا تتجاوز max (بمقياس size) مع حفظ الفقرات: nl = يسبقها سطر جديد
+  function splitText(text, max, size = s => s.length) {
+    const toks = [];
+    text.split('\n').forEach(line => {
+      let first = true;
+      const add = t => { toks.push({ t, nl: first }); first = false; };
+      if (size(line) <= max) { add(line); return; }
+      for (const s of line.split(/(?<=[.!?؟。！？…])\s+/)) {
+        if (size(s) <= max) { add(s); continue; }
+        let rest = s;
+        while (rest) {                                          // جملة أطول من الحد: نقطعها عند مسافة
+          let n = rest.length;
+          while (n > 1 && size(rest.slice(0, n)) > max) n = Math.floor(n * 0.9);
+          const sp = rest.lastIndexOf(' ', n);
+          const k = sp > n * 0.5 ? sp : n;
+          add(rest.slice(0, k).trim());
+          rest = rest.slice(k).trim();
+        }
+      }
+    });
+    const packs = [];
+    for (const k of toks) {
+      const cur = packs[packs.length - 1];
+      const sep = k.nl ? '\n' : ' ';
+      if (cur && size(cur.text + sep + k.t) <= max) cur.text += sep + k.t;
+      else packs.push({ text: k.t, nl: k.nl });
+    }
+    return packs;
+  }
+  const joinPacks = (packs, texts) => texts.map((t, i) => (i ? (packs[i].nl ? '\n' : ' ') : '') + t).join('');
+
+  async function mmTranslateChunk(text, src, tgt) {            // MyMemory يقبل نحو 500 بايت للطلب
+    const packs = splitText(text, 480, utf8Len);
+    const outs = [];
+    for (const p of packs) outs.push(p.text.trim() ? (await mmTranslate(p.text, src, tgt)).main : '');
+    return joinPacks(packs, outs);
+  }
+
+  function hideLong() {
+    stopSpeak();
+    $('#longOut').hidden = true;
+    $('#ws').classList.remove('has-out');
+  }
+  async function doLong(text) {
+    const id = ++seq;
+    const { src, tgt } = pickLangs(text);
+    $('#result').replaceChildren();
+    const packs = splitText(text, 1400);
+    const outs = packs.map(() => null);
+    const failed = new Set();
+    const via = new Set();
+    const paint = busy => paintLong({ id, src, tgt, text, packs, outs, failed, via, busy });
+    paint(true);
+    for (let i = 0; i < packs.length; i++) {
+      if (id !== seq) return;
+      let tr = packs[i].text.trim() ? null : '';
+      if (id !== seq) return;
+      if (tr === null) { try { tr = await mmTranslateChunk(packs[i].text, src, tgt); via.add('MyMemory'); } catch { /* يبقى الجزء بلا ترجمة */ } }
+      if (id !== seq) return;
+      if (tr === null) { failed.add(i); outs[i] = packs[i].text; } else outs[i] = tr;
+      paint(i < packs.length - 1);
+    }
+  }
+  function paintLong(s) {
+    const box = $('#longOut');
+    const done = s.outs.filter(x => x !== null).length;
+    const full = joinPacks(s.packs, s.outs.map(x => x ?? ''));
+    const speakBtn = iconBtn('volume', 'استمع إلى الترجمة', () => speakLong(full, s.tgt, speakBtn));
+    const body = h('div', { class: 'out-text', dir: dirOf(s.tgt), lang: s.tgt }, full || '…');
+    box.replaceChildren(...[
+      h('div', { class: 'pane-head' },
+        h('b', {}, LANG[s.tgt].name),
+        h('span', { class: 'grow' }),
+        speakBtn,
+        iconBtn('copy', 'نسخ الترجمة', () => copyText(full)),
+        iconBtn('download', 'حفظ الترجمة كملف نصي', () => downloadBlob(new Blob([full], { type: 'text/plain;charset=utf-8' }), 'languway-translation.txt')),
+        iconBtn('swap', 'استخدم الترجمة كنص أصلي', () => {
+          $('#q').value = full; $('#srcLang').value = s.tgt; $('#tgtLang').value = s.src === 'auto' ? 'en' : s.src; syncLangs(); syncQ(); hideLong(); $('#result').replaceChildren(); $('#q').focus();
+        })),
+      body,
+      s.busy ? h('p', { class: 'ai-status' }, h('span', { class: 'dot' }), `جارٍ الترجمة… ${done} / ${s.packs.length}`) : null,
+      !s.busy && s.failed.size ? h('p', { class: 'ai-status warn' }, 'تعذّرت ترجمة جزء من النص وبقي كما هو.',
+        h('button', { type: 'button', class: 'mini', onclick: () => doLong(s.text) }, icon('translate'), 'أعد المحاولة')) : null,
+      !s.busy ? h('p', { class: 'src-badge' }, icon('sparkle'), `${[...s.via].join(' + ') || '—'} · ترجمة آلية: راجعها قبل اعتمادها`) : null
+    ].filter(Boolean));
+    box.hidden = false;
+    $('#ws').classList.add('has-out');
+  }
+
+  /* ----- النطق الطويل: نقسّم النص إلى جمل ليكتمل على كل المتصفحات ----- */
+  const spk = { btn: null };
+  function stopSpeak() {
+    if (spk.btn) spk.btn.classList.remove('rec');
+    spk.btn = null;
+    try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch { /* تجاهل */ }
+  }
+  function speakLong(text, lang, btn) {
+    if (!('speechSynthesis' in window)) { toast('جهازك لا يدعم النطق الصوتي'); return; }
+    const mine = spk.btn === btn;
+    stopSpeak();
+    if (mine) return;                                               // الضغط الثاني يوقف
+    const parts = splitText(text, 200).map(p => p.text).filter(t => t.trim());
+    if (!parts.length) return;
+    spk.btn = btn; btn.classList.add('rec');
+    parts.forEach((t, i) => {
+      const u = utter(t, lang);
+      if (i === parts.length - 1) u.onend = u.onerror = () => { if (spk.btn === btn) { btn.classList.remove('rec'); spk.btn = null; } };
+      speechSynthesis.speak(u);
+    });
+  }
+
+  /* ----- الإملاء بالصوت (الميكروفون) ----- */
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const mic = { rec: null, on: false, base: '', idle: 0, t0: 0, heardAny: false, err: false };
+  const micLang = () => {
+    const s = $('#srcLang').value;
+    return s === 'auto' ? (navigator.language || 'ar-SA') : (LANG[s] && LANG[s].voice) || s;
+  };
+  function micUI(on) {
+    const b = $('#micBtn');
+    b.classList.toggle('rec', on);
+    b.setAttribute('aria-pressed', String(on));
+    b.setAttribute('aria-label', on ? 'إيقاف الإملاء' : 'إملاء بالصوت');
+    b.title = b.getAttribute('aria-label');
+  }
+  function micStart() {
+    if (!SpeechRec) { toast('الإملاء الصوتي غير متاح في هذا المتصفح. استخدم ميكروفون لوحة المفاتيح.'); return; }
+    stopSpeak();
+    const v = $('#q').value;
+    Object.assign(mic, { on: true, idle: 0, t0: Date.now(), heardAny: false, err: false, base: v && !/\s$/.test(v) ? v + ' ' : v });
+    micUI(true);
+    micListen();
+  }
+  function micListen() {                                           // جلسات قصيرة متتابعة: أثبت على أندرويد من الوضع المستمر
+    const rec = new SpeechRec();
+    mic.rec = rec;
+    rec.lang = micLang(); rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 1;
+    let heard = '';
+    rec.onresult = e => {
+      heard = Array.from(e.results).map(r => r[0].transcript).join('');
+      $('#q').value = (mic.base + heard).slice(0, MAX_LONG);
+      syncQ();
+    };
+    rec.onerror = e => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      mic.err = true; mic.on = false;
+      toast(SR_ERRORS[e.error] || 'تعذّر الإملاء الصوتي على هذا الجهاز.');
+    };
+    rec.onend = () => {
+      if (heard) { mic.heardAny = true; mic.idle = 0; mic.base = $('#q').value.replace(/\s*$/, ' '); } else mic.idle++;
+      if (mic.on && mic.idle < 2 && Date.now() - mic.t0 < 180000) { try { micListen(); return; } catch { /* نوقف */ } }
+      micFinish();
+    };
+    try { rec.start(); } catch { micFinish(); }
+  }
+  function micStop() { mic.on = false; try { mic.rec && mic.rec.stop(); } catch { /* تجاهل */ } }
+  function micFinish() {
+    const ok = mic.heardAny && !mic.err;
+    mic.on = false; mic.rec = null;
+    micUI(false);
+    if (ok) translateNow($('#q').value);                           // ما قلته يُترجم مباشرة، ويبقى النص قابلاً للتعديل
+  }
+
+  /* ----- الكاميرا: قراءة النص من صورة ثم ترجمته ----- */
+  const cam = { stream: null, job: 0, opener: null };
+  async function ocrImage(dataUrl) {
+    const prompt = 'Transcribe ALL the text visible in this image exactly as written, in its original language and script, keeping line breaks. Do not translate, explain, describe or add anything. If there is no readable text, reply with exactly NO_TEXT.';
+    const t = await ai.ask([{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: dataUrl } }] }], 90000);
+    const s = t.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '').trim();
+    return !s || /^NO_TEXT\.?$/i.test(s) ? '' : s;
+  }
+  async function toDataUrl(blob, maxSide = 1600) {                 // نصغّر الصورة قبل الإرسال لتسريع القراءة
+    let bmp;
+    try { bmp = await createImageBitmap(blob); }
+    catch {
+      bmp = await new Promise((res, rej) => { const u = URL.createObjectURL(blob); const im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('img')); }; im.src = u; });
+    }
+    const w0 = bmp.width || bmp.naturalWidth, h0 = bmp.height || bmp.naturalHeight;
+    if (!w0 || !h0) throw new Error('img');
+    const k = Math.min(1, maxSide / Math.max(w0, h0));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(bmp, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.86);
+  }
+  const camMsg = t => { $('#camMsg').textContent = t; $('#camMsg').hidden = !t; };
+  const camStatus = t => { $('#camStatus').textContent = t; };
+  function camStopStream() {
+    if (cam.stream) { cam.stream.getTracks().forEach(t => t.stop()); cam.stream = null; }
+    $('#camVideo').srcObject = null;
+  }
+  function camNoLive(msg) { $('#camVideo').hidden = true; camMsg(msg); }
+  async function camOpen() {
+    cam.opener = document.activeElement;
+    $('#camSheet').hidden = false;
+    document.body.classList.add('modal-open');
+    $('#camShot').hidden = true; $('#camVideo').hidden = false; camMsg(''); camStatus('');
+    $('#camSnap').disabled = false;
+    $('#camSnap span').textContent = 'التقاط';
+    $('#camClose').focus();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { camNoLive('متصفحك لا يدعم الكاميرا المباشرة. اختر صورة من المعرض أو التقطها بتطبيق الكاميرا.'); return; }
+    try {
+      cam.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false });
+      if ($('#camSheet').hidden) { camStopStream(); return; }
+      $('#camVideo').srcObject = cam.stream;
+      await $('#camVideo').play().catch(() => { /* التشغيل التلقائي ممنوع: يكفي الضغط على التقاط */ });
+    } catch (e) {
+      camNoLive(e && e.name === 'NotAllowedError' ? 'اسمح باستخدام الكاميرا من إعدادات المتصفح، أو اختر صورة من المعرض.' : 'تعذّر تشغيل الكاميرا. اختر صورة من المعرض.');
+    }
+  }
+  function camClose() {
+    cam.job++;                                                    // يلغي أي قراءة جارية
+    camStopStream();
+    $('#camSheet').hidden = true;
+    document.body.classList.remove('modal-open');
+    if (cam.opener && cam.opener.focus) cam.opener.focus();
+  }
+  async function camSnap() {
+    if (!$('#camShot').hidden) { camOpen(); return; }             // «التقاط من جديد»
+    const v = $('#camVideo');
+    if (!v.videoWidth) { toast('الكاميرا لم تجهز بعد'); return; }
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    camRead(await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9)));
+  }
+  async function camRead(blob) {
+    if (!blob || !/^image\//.test(blob.type)) { toast('اختر ملف صورة'); return; }
+    if (blob.size > 15 * 1048576) { toast('الصورة أكبر من 15 ميغابايت'); return; }
+    const job = ++cam.job;
+    camStopStream();
+    $('#camSnap').disabled = true;
+    camStatus('جارٍ قراءة النص من الصورة…');
+    const retry = msg => { camStatus(msg); $('#camSnap').disabled = false; $('#camSnap span').textContent = 'التقاط من جديد'; };
+    try {
+      const url = await toDataUrl(blob);
+      if (job !== cam.job) return;
+      $('#camShot').src = url; $('#camShot').hidden = false; $('#camVideo').hidden = true; camMsg('');
+      const txt = await ocrImage(url);
+      if (job !== cam.job) return;
+      if (!txt) { retry('لم أجد نصاً مقروءاً في الصورة. جرّب صورة أوضح وأقرب.'); return; }
+      camClose();
+      const q = $('#q');
+      q.value = cleanLong(q.value.trim() ? q.value.trim() + '\n' + txt : txt);
+      syncQ();
+      toast('تم استخراج النص من الصورة. راجعه عند الحاجة.');
+      translateNow(q.value);
+    } catch {
+      if (job === cam.job) retry(navigator.onLine ? 'تعذّرت قراءة الصورة الآن. أعد المحاولة بعد قليل.' : 'لا يوجد اتصال بالإنترنت.');
+    }
   }
 
   /* ---------- 9) الاختبار ---------- */
@@ -1081,8 +1398,6 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     const b = $('#themeToggle');
     if (!b) return;
     b.setAttribute('aria-checked', String(isDark()));
-    const nu = $('#navTheme use');
-    if (nu) nu.setAttribute('href', isDark() ? '#i-sun' : '#i-moon');
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', isDark() ? '#070D20' : '#1B2FA8');
   }
@@ -1252,7 +1567,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     btn.dataset.state = 'run';
     let done = 0;
     try {
-      const cache = await caches.open('languway-v5');
+      const cache = await caches.open('languway-v7');
       for (const f of SHELL_FILES) {
         if (offlineAbort) break;
         try { const r = await fetch(f, { cache: 'reload' }); if (r.ok) await cache.put(f, r); } catch { /* ملف اختياري */ }
@@ -1271,25 +1586,6 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
   }
 
   /* ---------- 12.10) أدوات الواجهة ---------- */
-  // نص متحرك في خانة البحث (يتوقف عند الكتابة)
-  function typewriterPlaceholder() {
-    const q = $('#q');
-    const words = ['hello', 'مرحباً', 'bonjour', 'knowledge', 'اشتياق', 'journey'];
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let wi = 0, ci = 0, del = false;
-    const tick = () => {
-      if (document.activeElement !== q && !q.value) {
-        const w = words[wi];
-        ci += del ? -1 : 1;
-        q.placeholder = w.slice(0, ci) + (ci % 2 ? '|' : '');
-        if (!del && ci >= w.length) { del = true; return setTimeout(tick, 1100); }
-        if (del && ci <= 0) { del = false; wi = (wi + 1) % words.length; }
-      } else { q.placeholder = 'اكتب كلمة أو جملة…'; }
-      setTimeout(tick, del ? 60 : 110);
-    };
-    tick();
-  }
-
   function initPanel() {
     const panel = $('#panel');
     const setCollapsed = c => {
@@ -1304,7 +1600,7 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
       e.preventDefault();
       const t = clean($('#panelQ').value);
       if (!t) { setCollapsed(false); $('#panelQ').focus(); return; }
-      $('#q').value = t; $('#clearQ').hidden = false; showView('search'); doSearch(t); $('#panelQ').value = '';
+      $('#q').value = t; showView('search'); doSearch(t); $('#panelQ').value = '';
     });
     $('#panelSearch').addEventListener('click', () => { if (panel.classList.contains('collapsed')) { setCollapsed(false); $('#panelQ').focus(); } });
   }
@@ -1321,6 +1617,8 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
         tile('book', 'معنى وسياق', 'شرح دقيق وفروق المعاني حسب الجملة'),
         tile('translate', 'جمل وتصريفات', 'أمثلة متعددة وأزمنة الأفعال والجمع'),
         tile('volume', 'نطق صوتي', 'استمع للكلمات والجمل بوضوح'),
+        tile('mic', 'إملاء بالصوت', 'تحدّث فيُكتب كلامك ويُترجم مباشرة'),
+        tile('camera', 'ترجمة من الصورة', 'صوّر لوحة أو ورقة لتقرأ نصها وتترجمه'),
         tile('quiz', 'اختبارات وبطاقات', 'راجع ما حفظته وثبّت التعلّم')),
       h('h2', { class: 'h2' }, 'لماذا Languway؟'),
       h('div', { class: 'card cmp-wrap' }, h('table', { class: 'cmp' }, h('tbody', {},
@@ -1342,9 +1640,24 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     loadVoices();
     if ('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', loadVoices);
 
-    $('#searchForm').addEventListener('submit', e => { e.preventDefault(); doSearch($('#q').value); $('#q').blur(); });
-    $('#q').addEventListener('input', () => { $('#clearQ').hidden = !$('#q').value; });
-    $('#clearQ').addEventListener('click', () => { $('#q').value = ''; $('#clearQ').hidden = true; $('#q').focus(); });
+    $('#searchForm').addEventListener('submit', e => { e.preventDefault(); translateNow($('#q').value); $('#q').blur(); });
+    $('#q').addEventListener('input', syncQ);
+    $('#q').addEventListener('keydown', e => {                    // Enter يترجم الكلمات والجمل القصيرة، وCtrl+Enter يترجم أي نص
+      if (e.key !== 'Enter' || e.isComposing || e.shiftKey) return;
+      if (e.ctrlKey || e.metaKey || isShort(cleanLong($('#q').value))) { e.preventDefault(); translateNow($('#q').value); $('#q').blur(); }
+    });
+    $('#clearQ').addEventListener('click', () => { if (mic.on) micStop(); $('#q').value = ''; syncQ(); hideLong(); $('#q').focus(); });
+    $('#micBtn').addEventListener('click', () => (mic.on ? micStop() : micStart()));
+    $('#speakQ').addEventListener('click', e => { const t = cleanLong($('#q').value); if (t) speakLong(t, pickLangs(t).src, e.currentTarget); else toast('اكتب نصاً أولاً'); });
+    $('#camBtn').addEventListener('click', camOpen);
+    $('#camClose').addEventListener('click', camClose);
+    $('#camSnap').addEventListener('click', camSnap);
+    $('#camPick').addEventListener('click', () => $('#camFile').click());
+    $('#camFile').addEventListener('change', e => { camRead(e.target.files[0]); e.target.value = ''; });
+    $('#camSheet').addEventListener('click', e => { if (e.target === e.currentTarget) camClose(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#camSheet').hidden) camClose(); });
+    window.addEventListener('pagehide', () => { camStopStream(); stopSpeak(); });
+    syncQ();
     $('#srcLang').addEventListener('change', syncLangs);
     $('#tgtLang').addEventListener('change', syncLangs);
     $('#swapBtn').addEventListener('click', () => {
@@ -1360,7 +1673,6 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
       nav.classList.remove('sweep'); void nav.offsetWidth; nav.classList.add('sweep');
     }));
     $('#themeToggle').addEventListener('click', toggleTheme);
-    $('#navTheme').addEventListener('click', toggleTheme);
     // تموّج دائري عند لمس عناصر الزجاج السائل
     $$('.g-item').forEach(b => b.addEventListener('pointerdown', e => {
       const r = b.getBoundingClientRect();
@@ -1374,11 +1686,10 @@ Rules: give every distinct meaning (up to 6 senses); give 6 varied example sente
     $('#offlineBtn').addEventListener('click', prepareOffline);
     if (store.get('offline', false)) { $('#offlineBtn').dataset.state = 'done'; $('#offlineBtn').style.setProperty('--p', '100'); $('#offlineText').textContent = 'التطبيق جاهز للعمل بدون إنترنت.'; }
     $('#pasteBtn').addEventListener('click', async () => {
-      try { const t = await navigator.clipboard.readText(); $('#q').value = clean(t); $('#clearQ').hidden = !$('#q').value; $('#q').focus(); }
+      try { const t = await navigator.clipboard.readText(); $('#q').value = cleanLong(t); syncQ(); $('#q').focus(); }
       catch { toast('اسمح بالوصول إلى الحافظة أو الصق يدوياً'); }
     });
     initPanel();
-    typewriterPlaceholder();
     $('#favFilter').addEventListener('input', renderFavs);
     $('#favExport').addEventListener('click', exportFavs);
     $('#favImport').addEventListener('click', () => $('#importFile').click());

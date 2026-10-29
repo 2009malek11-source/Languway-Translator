@@ -93,6 +93,8 @@
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></symbol>
   <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
   <symbol id="i-slow" viewBox="0 0 24 24"><path d="M4 16a8 8 0 1 1 16 0"/><path d="m12 16 3.5-5"/><circle cx="12" cy="16" r="1" fill="currentColor"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.7"/><path d="m4.5 18 5-5 3.5 3.5 2.5-2.5 4 4"/></symbol>
   <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="16" rx="2.5"/><path d="M9 5V4h6v1M9 11h6M9 15h4"/></symbol>
 </svg>
 
@@ -133,7 +135,7 @@
     <header class="top">
       <div class="brand">
         <img src="logo-mark.png" alt="" width="34" height="34">
-        <span class="brand-ar">مترجم</span><span class="brand-name">Languway</span><span class="ver">v2.3</span>
+        <span class="brand-ar">مترجم</span><span class="brand-name">Languway</span><span class="ver">v2.4</span>
       </div>
       <div class="top-actions">
         <span id="netBadge" class="net" hidden>بدون اتصال</span>
@@ -156,7 +158,7 @@
           <img class="hero-logo" src="logo-mark.png" alt="" width="64" height="64">
           <div class="hero-text">
             <h1>ترجم وتعلّم</h1>
-            <p>اكتب كلمة أو جملة لتعرف معناها وتصريفها وكيف تُستخدم.</p>
+            <p>اكتب كلمة أو جملة أو مقالاً كاملاً، أو تحدّث، أو صوّر النص بالكاميرا.</p>
           </div>
 
           <div class="langbar">
@@ -169,23 +171,39 @@
             <select id="tgtLang"></select>
           </div>
 
-          <!-- شريط البحث المتحرك -->
-          <form id="searchForm" class="searchbox" autocomplete="off">
-            <span class="sb-label" aria-hidden="true">ابحث</span>
-            <input id="q" type="text" maxlength="300" placeholder="اكتب كلمة أو جملة…" enterkeyhint="search"
-                   autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="النص المراد ترجمته">
-            <button id="pasteBtn" class="icon-btn" type="button" aria-label="لصق من الحافظة" title="لصق">
-              <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
-            </button>
-            <button id="clearQ" class="icon-btn" type="button" hidden aria-label="مسح">
-              <svg class="ic" aria-hidden="true"><use href="#i-close"/></svg>
-            </button>
-            <button class="go-round" type="submit" aria-label="ابحث">
-              <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
-            </button>
-          </form>
           <p id="modeLine" class="modeline"></p>
         </div>
+
+        <!-- ============ مساحة الكتابة الكبيرة + نتيجة النصوص الطويلة ============ -->
+        <div class="ws" id="ws">
+          <form id="searchForm" class="pane pane-in" autocomplete="off">
+            <label class="sr" for="q">النص المراد ترجمته</label>
+            <textarea id="q" maxlength="5000" rows="6" dir="auto" placeholder="اكتب كلمة أو جملة أو نصاً طويلاً…"
+                      autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></textarea>
+            <div class="pane-bar">
+              <span id="qCount" class="count" dir="ltr">0 / 5000</span>
+              <span class="grow"></span>
+              <button id="micBtn" class="icon-btn" type="button" aria-pressed="false" aria-label="إملاء بالصوت" title="إملاء بالصوت">
+                <svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg>
+              </button>
+              <button id="camBtn" class="icon-btn" type="button" aria-label="ترجمة نص من صورة" title="ترجمة نص من صورة">
+                <svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg>
+              </button>
+              <button id="pasteBtn" class="icon-btn" type="button" aria-label="لصق من الحافظة" title="لصق">
+                <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
+              </button>
+              <button id="speakQ" class="icon-btn" type="button" aria-label="استمع إلى النص" title="استمع إلى النص">
+                <svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg>
+              </button>
+              <button id="clearQ" class="icon-btn" type="button" hidden aria-label="مسح النص" title="مسح">
+                <svg class="ic" aria-hidden="true"><use href="#i-close"/></svg>
+              </button>
+              <button id="goBtn" class="go" type="submit"><svg class="ic" aria-hidden="true"><use href="#i-translate"/></svg><span>ترجم</span></button>
+            </div>
+          </form>
+          <section id="longOut" class="pane pane-out" hidden aria-live="polite" aria-label="الترجمة"></section>
+        </div>
+        <p class="hint ws-hint">Enter للترجمة السريعة للكلمات والجمل القصيرة، وللنصوص الطويلة اضغط زر «ترجم» أو Ctrl + Enter.</p>
 
         <div id="recent" class="recent" aria-label="عمليات البحث الأخيرة"></div>
         <div id="result" aria-live="polite"></div>
@@ -353,7 +371,7 @@
           </div>
         </div>
 
-        <p class="hint center">Languway — الإصدار 2.3</p>
+        <p class="hint center">Languway — الإصدار 2.4</p>
       </section>
     </main>
   </div>
@@ -367,9 +385,28 @@
   <button class="g-item" type="button" data-nav="favs" aria-selected="false"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg><span>المفضلة</span></button>
   <button class="g-item" type="button" data-nav="quiz" aria-selected="false"><svg class="ic" aria-hidden="true"><use href="#i-quiz"/></svg><span>اختبار</span></button>
   <button class="g-item g-gear" type="button" data-nav="settings" aria-selected="false"><svg class="ic" aria-hidden="true"><use href="#i-gear"/></svg><span>الإعدادات</span></button>
-  <span class="g-sep" aria-hidden="true"></span>
-  <button id="navTheme" class="g-theme" type="button" aria-label="تبديل الوضع الليلي"><svg class="ic" aria-hidden="true"><use href="#i-moon"/></svg></button>
 </nav>
+
+<!-- ============ نافذة الكاميرا: التقاط نص أو اختيار صورة ============ -->
+<div id="camSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="camT" hidden>
+  <div class="sheet-card">
+    <div class="sheet-head">
+      <h2 id="camT" class="h2 flush">ترجمة نص من صورة</h2>
+      <button id="camClose" class="icon-btn" type="button" aria-label="إغلاق"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="cam-view">
+      <video id="camVideo" playsinline muted autoplay></video>
+      <img id="camShot" alt="الصورة الملتقطة" hidden>
+      <p id="camMsg" class="cam-msg" hidden></p>
+    </div>
+    <div class="btn-row cam-actions">
+      <button id="camSnap" class="go" type="button"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg><span>التقاط</span></button>
+      <button id="camPick" class="ghost" type="button"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg><span>من المعرض</span></button>
+      <input id="camFile" type="file" accept="image/*" hidden>
+    </div>
+    <p id="camStatus" class="hint" role="status"></p>
+  </div>
+</div>
 
 <div id="toast" class="toast" role="status" hidden></div>
 
