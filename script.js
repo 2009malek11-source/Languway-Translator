@@ -962,7 +962,14 @@ Limits: senses max 4, examples max 3, tenses only when the text is a verb (max 6
     $('#srcLang').value = settings.src;
     $('#tgtLang').value = settings.tgt;
   }
+  // لغة مربع الكتابة واتجاهه تتبعان لغة المصدر، فتقترح لوحات المفاتيح التي تدعم ذلك لغتها (مثل مترجم جوجل)
+  function syncKeyboard() {
+    const q = $('#q'), v = $('#srcLang').value;
+    if (v === 'auto') { q.removeAttribute('lang'); q.setAttribute('dir', 'auto'); return; }
+    q.setAttribute('lang', v); q.setAttribute('dir', dirOf(v));
+  }
   function syncLangs() {
+    syncKeyboard();
     settings.src = $('#srcLang').value;
     settings.tgt = $('#tgtLang').value;
     saveSettings();
@@ -1128,11 +1135,40 @@ Limits: senses max 4, examples max 3, tenses only when the text is a verb (max 6
 
   /* ----- الإملاء بالصوت (الميكروفون) ----- */
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const mic = { rec: null, on: false, base: '', t0: 0, heardAny: false, err: false, silent: 0 };
-  const micLang = () => {
-    const s = $('#srcLang').value;
-    return s === 'auto' ? (navigator.language || 'ar-SA') : (LANG[s] && LANG[s].voice) || s;
-  };
+  const KEYBOARD_MIC = 'استخدم زر الميكروفون في لوحة مفاتيح الهاتف داخل مربع الكتابة، فهو يعمل في كل المتصفحات.';
+  const srLang = code => (code === 'auto' ? (navigator.language || 'ar-SA') : (LANG[code] && LANG[code].voice) || code);
+
+  // يرجع سبب تعذّر الإملاء الصوتي في هذا الجهاز، أو '' إن كان ممكناً
+  function srBlocked() {
+    if (!SpeechRec) return 'هذا المتصفح لا يدعم الإملاء الصوتي. ' + KEYBOARD_MIC;
+    if (isIOS && isStandalone()) return 'آيفون لا يسمح بالإملاء الصوتي داخل التطبيق المثبّت على الشاشة. افتح الموقع من متصفح سفاري، أو ' + KEYBOARD_MIC;
+    return '';
+  }
+  // جلسة استماع واحدة. تُرجع {stop, abort}. on.text(نص مؤقت) · on.error(رمز) · on.end({heard, err, silentFail})
+  function listenOnce(lang, on) {
+    const rec = new SpeechRec();
+    const t0 = Date.now();
+    let heard = '', started = false, err = false, dead = false;
+    rec.lang = lang; rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 1;
+    rec.onstart = () => { started = true; };
+    rec.onresult = e => { heard = Array.from(e.results).map(r => r[0].transcript).join(''); if (!dead) on.text(heard); };
+    rec.onerror = e => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      err = true; if (!dead) on.error(e.error || 'error');
+    };
+    rec.onend = () => {
+      if (dead) return;
+      dead = true;
+      on.end({ heard, err, silentFail: !heard && !err && (!started || Date.now() - t0 < 500) });
+    };
+    try { rec.start(); } catch { dead = true; on.error('start'); on.end({ heard: '', err: true, silentFail: false }); }
+    return { stop() { try { rec.stop(); } catch { /* تجاهل */ } }, abort() { dead = true; try { rec.abort(); } catch { /* تجاهل */ } } };
+  }
+  const srMessage = code => SR_ERRORS[code] || `تعذّر الإملاء الصوتي (${code}). ${KEYBOARD_MIC}`;
+  const SILENT_MSG = 'الإملاء الصوتي لا يستجيب في هذا المتصفح. ' + KEYBOARD_MIC;
+
+  /* ----- الإملاء بالصوت في مربع الكتابة: جلسات قصيرة متتابعة (أثبت على أندرويد وآيفون من الوضع المستمر) ----- */
+  const mic = { ctl: null, on: false, base: '', t0: 0, got: false, fail: false, silent: 0 };
   function micUI(on) {
     const b = $('#micBtn');
     b.classList.toggle('rec', on);
@@ -1140,58 +1176,117 @@ Limits: senses max 4, examples max 3, tenses only when the text is a verb (max 6
     b.setAttribute('aria-label', on ? 'إيقاف الإملاء' : 'إملاء بالصوت');
     b.title = b.getAttribute('aria-label');
   }
-  const KEYBOARD_MIC = 'استخدم زر الميكروفون في لوحة مفاتيح الهاتف داخل مربع الكتابة، فهو يعمل في كل المتصفحات.';
-  async function micStart() {
-    if (mic.on) { micStop(); return; }
-    if (!SpeechRec) { toast('هذا المتصفح لا يدعم الإملاء الصوتي. ' + KEYBOARD_MIC, 6000); return; }
+  function micStart() {
+    const why = srBlocked();
+    if (why) { toast(why, 7000); return; }
     stopSpeak();
-    // نطلب إذن الميكروفون أولاً لتظهر نافذة الإذن بوضوح، ويأتي رفض الإذن برسالة صريحة
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach(t => t.stop()); }
-      catch (e) {
-        toast(e && e.name === 'NotFoundError' ? 'لا يوجد ميكروفون في هذا الجهاز.' : SR_ERRORS['not-allowed'], 6000);
-        return;
-      }
-    }
     const v = $('#q').value;
-    Object.assign(mic, { on: true, t0: Date.now(), heardAny: false, err: false, silent: 0, base: v && !/\s$/.test(v) ? v + ' ' : v });
+    Object.assign(mic, { on: true, t0: Date.now(), got: false, fail: false, silent: 0, base: v && !/\s$/.test(v) ? v + ' ' : v });
     micUI(true);
-    toast('أستمع إليك… تكلّم الآن', 2500);
-    micListen();
+    toast('أستمع إليك… تكلّم الآن، واضغط الزر مرة أخرى للإيقاف', 3500);
+    micLoop();
   }
-  function micListen() {                                           // جلسات قصيرة متتابعة: أثبت على أندرويد من الوضع المستمر
-    const rec = new SpeechRec();
-    mic.rec = rec;
-    rec.lang = micLang(); rec.continuous = false; rec.interimResults = true; rec.maxAlternatives = 1;
-    const t0 = Date.now();
-    let heard = '', started = false;
-    rec.onstart = () => { started = true; };
-    rec.onresult = e => {
-      heard = Array.from(e.results).map(r => r[0].transcript).join('');
-      $('#q').value = (mic.base + heard).slice(0, MAX_LONG);
-      syncQ();
-    };
-    rec.onerror = e => {
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
-      mic.err = true; mic.on = false;
-      toast(SR_ERRORS[e.error] || `تعذّر الإملاء الصوتي (${e.error || 'خطأ'}). ${KEYBOARD_MIC}`, 6000);
-    };
-    rec.onend = () => {
-      if (heard) { mic.heardAny = true; mic.silent = 0; mic.base = $('#q').value.replace(/\s*$/, ' '); } else mic.silent++;
-      // انتهت الجلسة فوراً بلا صوت ولا خطأ: الخدمة الصوتية معطلة في هذا المتصفح أو في وضع التطبيق المثبّت
-      if (!heard && !mic.err && (!started || Date.now() - t0 < 500)) { mic.err = true; mic.on = false; toast('الإملاء الصوتي لا يستجيب في هذا المتصفح. ' + KEYBOARD_MIC, 7000); }
-      if (mic.on && mic.silent < 2 && Date.now() - mic.t0 < 180000) { try { micListen(); return; } catch { /* نوقف */ } }
-      if (mic.on && !mic.heardAny) toast('لم أسمع شيئاً. اقترب من الميكروفون وأعد المحاولة.', 4000);
-      micFinish();
-    };
-    try { rec.start(); } catch { mic.err = true; toast('تعذّر تشغيل الميكروفون. ' + KEYBOARD_MIC, 6000); micFinish(); }
+  function micLoop() {
+    const ctl = listenOnce(srLang($('#srcLang').value), {
+      text: t => { mic.got = true; $('#q').value = (mic.base + t).slice(0, MAX_LONG); syncQ(); },
+      error: code => { mic.fail = true; toast(srMessage(code), 7000); },
+      end: r => {
+        if (mic.ctl !== ctl || !mic.on) return;
+        if (r.heard) { mic.silent = 0; mic.base = $('#q').value.replace(/\s*$/, ' '); } else mic.silent++;
+        if (r.silentFail && !mic.fail) { mic.fail = true; toast(SILENT_MSG, 7000); }
+        if (!mic.fail && mic.silent < 2 && Date.now() - mic.t0 < 180000) { micLoop(); return; }
+        if (!mic.fail && !mic.got) toast('لم أسمع شيئاً. اقترب من الميكروفون وأعد المحاولة.', 4000);
+        micFinish();
+      }
+    });
+    mic.ctl = ctl;
   }
-  function micStop() { mic.on = false; try { mic.rec && mic.rec.stop(); } catch { /* تجاهل */ } }
+  function micStop() {                                             // إيقاف فوري، وما كُتب يبقى في المربع ويُترجم
+    if (!mic.on) return;
+    mic.on = false;
+    if (mic.ctl) mic.ctl.abort();
+    micFinish();
+  }
   function micFinish() {
-    const ok = mic.heardAny && !mic.err;
-    mic.on = false; mic.rec = null;
+    const ok = mic.got && !mic.fail;
+    mic.on = false; mic.ctl = null;
     micUI(false);
-    if (ok) translateNow($('#q').value);                           // ما قلته يُترجم مباشرة، ويبقى النص قابلاً للتعديل
+    if (ok) translateNow($('#q').value);
+  }
+
+  /* ----- محادثة صوتية بين لغتين (مثل وضع المحادثة في مترجم جوجل) ----- */
+  const conv = { a: 'ar', b: 'en', ctl: null, side: '', busy: false };
+  const convEnd = () => { if (conv.ctl) { conv.ctl.abort(); conv.ctl = null; } conv.side = ''; $$('#convCard .conv-mic').forEach(b => b.classList.remove('rec')); };
+  async function convSay(side, text) {
+    const from = side === 'a' ? conv.a : conv.b, to = side === 'a' ? conv.b : conv.a;
+    text = clean(text);
+    if (!text) return;
+    const log = $('#convLog');
+    const row = h('div', { class: 'bub ' + side });
+    const tr = h('p', { class: 'bub-tr', dir: dirOf(to), lang: to }, '…');
+    row.append(h('p', { dir: dirOf(from), lang: from }, text), tr);
+    log.append(row);
+    log.scrollTop = log.scrollHeight;
+    try {
+      const out = (await mmTranslate(text, from, to)).main;
+      tr.textContent = out;
+      row.append(iconBtn('volume', 'استمع', () => speak(out, to)));
+      speak(out, to);
+    } catch { tr.textContent = 'تعذّرت الترجمة الآن.'; tr.classList.add('warn'); }
+    log.scrollTop = log.scrollHeight;
+  }
+  function convToggle(side) {
+    if (conv.side === side) { convEnd(); return; }
+    convEnd();
+    const why = srBlocked();
+    if (why) { toast(why, 7000); return; }
+    stopSpeak();
+    conv.side = side;
+    $(`#convCard .conv-mic[data-side="${side}"]`).classList.add('rec');
+    let last = '';
+    const ctl = listenOnce(srLang(side === 'a' ? conv.a : conv.b), {
+      text: t => { last = t; $('#convLive').textContent = t; },
+      error: code => toast(srMessage(code), 7000),
+      end: r => {
+        if (conv.ctl !== ctl) return;
+        $('#convLive').textContent = '';
+        convEnd();
+        if (r.silentFail) toast(SILENT_MSG, 7000);
+        else if (last) convSay(side, last);
+      }
+    });
+    conv.ctl = ctl;
+  }
+  function convOpen() {
+    const s = $('#srcLang').value, t = $('#tgtLang').value;
+    conv.a = s === 'auto' ? (t === 'ar' ? 'en' : 'ar') : s;
+    conv.b = t === conv.a ? (conv.a === 'ar' ? 'en' : 'ar') : t;
+    const sel = (key) => {
+      const el = h('select', { 'aria-label': key === 'a' ? 'اللغة الأولى' : 'اللغة الثانية' }, LANGS.map(([c, n]) => h('option', { value: c }, n)));
+      el.value = conv[key];
+      el.addEventListener('change', () => { conv[key] = el.value; convEnd(); $$('#convCard [data-name]').forEach(x => { x.textContent = LANG[conv[x.dataset.name]].name; }); });
+      return el;
+    };
+    const micBtn = side => h('button', { type: 'button', class: 'conv-mic', 'data-side': side, onclick: () => convToggle(side) },
+      icon('mic'), h('span', { 'data-name': side }, LANG[conv[side]].name));
+    const input = h('input', { type: 'text', id: 'convIn', maxlength: 400, placeholder: 'أو اكتب جملة ثم اختر اللغة…', autocomplete: 'off', enterkeyhint: 'send' });
+    const send = side => h('button', { type: 'button', class: 'mini', onclick: () => { const v = input.value; input.value = ''; convSay(side, v); } }, h('span', { 'data-name': side }, LANG[conv[side]].name));
+    $('#convCard').replaceChildren(
+      h('div', { class: 'sheet-head' }, h('h2', { class: 'h2 flush' }, 'محادثة بين لغتين'),
+        iconBtn('close', 'إغلاق', convClose)),
+      h('div', { class: 'conv-langs' }, sel('a'), icon('swap'), sel('b')),
+      h('div', { id: 'convLog', class: 'conv-log', 'aria-live': 'polite' }, h('p', { class: 'hint' }, 'اضغط ميكروفون لغتك وتحدّث، فتُترجم جملتك وتُنطق للطرف الآخر. ثم يضغط هو ميكروفون لغته.')),
+      h('p', { id: 'convLive', class: 'conv-live', 'aria-live': 'polite' }),
+      h('div', { class: 'conv-mics' }, micBtn('a'), micBtn('b')),
+      h('div', { class: 'conv-type' }, input, send('a'), send('b')));
+    $('#convSheet').hidden = false;
+    document.body.classList.add('modal-open');
+  }
+  function convClose() {
+    convEnd();
+    try { speechSynthesis.cancel(); } catch { /* تجاهل */ }
+    $('#convSheet').hidden = true;
+    document.body.classList.remove('modal-open');
   }
 
   /* ----- الكاميرا: قراءة النص من صورة ثم ترجمته ----- */
@@ -1642,7 +1737,7 @@ Limits: senses max 4, examples max 3, tenses only when the text is a verb (max 6
     btn.dataset.state = 'run';
     let done = 0;
     try {
-      const cache = await caches.open('languway-v8');
+      const cache = await caches.open('languway-v9');
       for (const f of SHELL_FILES) {
         if (offlineAbort) break;
         try { const r = await fetch(f, { cache: 'reload' }); if (r.ok) await cache.put(f, r); } catch { /* ملف اختياري */ }
@@ -1694,6 +1789,7 @@ Limits: senses max 4, examples max 3, tenses only when the text is a verb (max 6
         tile('volume', 'نطق صوتي', 'استمع للكلمات والجمل بوضوح'),
         tile('mic', 'إملاء بالصوت', 'تحدّث فيُكتب كلامك ويُترجم مباشرة'),
         tile('camera', 'ترجمة من الصورة', 'صوّر لوحة أو ورقة لتقرأ نصها وتترجمه'),
+        tile('mic', 'محادثة بين لغتين', 'تحدّثا بلغتين مختلفتين ويترجم التطبيق بينكما'),
         tile('quiz', 'اختبارات وبطاقات', 'راجع ما حفظته وثبّت التعلّم')),
       h('h2', { class: 'h2' }, 'لماذا Languway؟'),
       h('div', { class: 'card cmp-wrap' }, h('table', { class: 'cmp' }, h('tbody', {},
@@ -1730,9 +1826,12 @@ Limits: senses max 4, examples max 3, tenses only when the text is a verb (max 6
     $('#camPick').addEventListener('click', () => $('#camFile').click());
     $('#camFile').addEventListener('change', e => { camRead(e.target.files[0]); e.target.value = ''; });
     $('#camSheet').addEventListener('click', e => { if (e.target === e.currentTarget) camClose(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#camSheet').hidden) camClose(); });
-    window.addEventListener('pagehide', () => { camStopStream(); stopSpeak(); });
+    document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!$('#camSheet').hidden) camClose(); if (!$('#convSheet').hidden) convClose(); });
+    window.addEventListener('pagehide', () => { camStopStream(); stopSpeak(); micStop(); convEnd(); });
     syncQ();
+    syncKeyboard();
+    $('#convBtn').addEventListener('click', convOpen);
+    $('#convSheet').addEventListener('click', e => { if (e.target === e.currentTarget) convClose(); });
     $('#srcLang').addEventListener('change', syncLangs);
     $('#tgtLang').addEventListener('change', syncLangs);
     $('#swapBtn').addEventListener('click', () => {

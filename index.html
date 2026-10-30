@@ -203,6 +203,7 @@
           </form>
           <section id="longOut" class="pane pane-out" hidden aria-live="polite" aria-label="الترجمة"></section>
         </div>
+        <p class="ws-hint conv-entry"><button id="convBtn" class="ghost" type="button"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg><span>محادثة صوتية بين لغتين</span></button></p>
         <p class="hint ws-hint">Enter للترجمة السريعة للكلمات والجمل القصيرة، وللنصوص الطويلة اضغط زر «ترجم» أو Ctrl + Enter.</p>
 
         <div id="recent" class="recent" aria-label="عمليات البحث الأخيرة"></div>
@@ -407,6 +408,8 @@
     <p id="camStatus" class="hint" role="status"></p>
   </div>
 </div>
+
+<div id="convSheet" class="sheet" role="dialog" aria-modal="true" hidden><div id="convCard" class="sheet-card"></div></div>
 
 <div id="toast" class="toast" role="status" hidden></div>
 
