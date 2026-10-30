@@ -605,3 +605,9 @@ body.modal-open { overflow: hidden; }
   .pane-in textarea { min-height: clamp(170px, 30vh, 300px); padding: 14px 16px 6px; }
   .pane-bar .go { flex: 1 1 100%; margin: 6px 0 0; padding: 12px 20px; }
 }
+
+/* تعريف بعدة لغات، وشرح القاعدة */
+.def { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.def .lbl { font-size: .72rem; padding: 1px 8px; border-radius: 99px; background: var(--chip, rgba(120,130,200,.16)); color: var(--muted); white-space: nowrap; }
+.long-rule { margin-top: 12px; display: grid; gap: 8px; justify-items: start; }
+.rule-text { margin: 6px 0 0; white-space: pre-wrap; line-height: 1.8; }

@@ -4,7 +4,7 @@
    - ملفات الموقع: تُحدَّث في الخلفية (stale-while-revalidate)
    - نتائج الترجمة والقاموس: الشبكة أولاً ثم آخر نسخة محفوظة
    ========================================================== */
-const VERSION = 'languway-v7';
+const VERSION = 'languway-v8';
 const API_CACHE = 'languway-api';
 const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-192.png', 'icon-maskable-512.png'];
 const API_HOSTS = ['api.mymemory.translated.net', 'api.dictionaryapi.dev', 'en.wiktionary.org', 'ar.wiktionary.org', 'tatoeba.org'];
