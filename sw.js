@@ -1,17 +1,21 @@
 /* ==========================================================
    Languway — Service Worker
    - الواجهة: تُخزَّن عند التثبيت وتعمل بدون إنترنت
-   - ملفات الموقع: تُحدَّث في الخلفية (stale-while-revalidate)
+   - ملفات الموقع: الشبكة أولاً (دون استعمال ذاكرة المتصفح) ثم النسخة المحفوظة عند انقطاع الإنترنت
    - نتائج الترجمة والقاموس: الشبكة أولاً ثم آخر نسخة محفوظة
+   - version.json لا يُخزَّن أبداً: الصفحة تقارن به لتعرض رسالة «يوجد تحديث»
    ========================================================== */
-const VERSION = 'languway-v10';
+const VERSION = 'languway-v11';          // يُغيَّر مع كل إصدار، ويطابق APP_VERSION في script.js
 const API_CACHE = 'languway-api';
 const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-192.png', 'icon-maskable-512.png'];
 const API_HOSTS = ['api.mymemory.translated.net', 'api.dictionaryapi.dev', 'en.wiktionary.org', 'ar.wiktionary.org', 'tatoeba.org'];
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: 'reload' يضمن أن النسخة المحفوظة جديدة وليست من ذاكرة المتصفح
+  e.waitUntil(caches.open(VERSION)
+    .then(c => Promise.all(SHELL.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => { /* ملف اختياري */ }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -22,7 +26,6 @@ self.addEventListener('activate', e => {
   );
 });
 
-// نسخة قديمة فوراً ثم تحديث في الخلفية
 async function staleWhileRevalidate(req, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(req);
@@ -30,7 +33,6 @@ async function staleWhileRevalidate(req, cacheName) {
   return cached || fresh;
 }
 
-// الشبكة أولاً، وعند الفشل نستخدم المحفوظ
 async function networkFirst(req, cacheName) {
   const cache = await caches.open(cacheName);
   try {
@@ -44,6 +46,17 @@ async function networkFirst(req, cacheName) {
   }
 }
 
+// ملفات الموقع: من الشبكة مباشرة (بلا ذاكرة المتصفح)، وعند انقطاع الإنترنت من النسخة المحفوظة
+async function siteFile(req) {
+  try {
+    const res = await fetch(req, { cache: 'no-cache' });
+    if (res && res.ok) { const c = res.clone(); caches.open(VERSION).then(ca => ca.put(req, c)); }
+    return res;
+  } catch {
+    return (await caches.match(req, { ignoreSearch: true })) || (req.mode === 'navigate' ? caches.match('index.html') : Response.error());
+  }
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;              // لا نعترض طلبات POST (مثل الوضع الذكي)
@@ -52,16 +65,6 @@ self.addEventListener('fetch', e => {
   if (API_HOSTS.includes(url.hostname)) { e.respondWith(networkFirst(req, API_CACHE)); return; }
   if (FONT_HOSTS.includes(url.hostname)) { e.respondWith(staleWhileRevalidate(req, VERSION)); return; }
   if (url.origin !== location.origin) return;
-
-  // ملفات الموقع: الشبكة أولاً (يظهر كل تحديث فوراً) ثم النسخة المحفوظة عند انقطاع الإنترنت
-  if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(res => { const c = res.clone(); caches.open(VERSION).then(ca => ca.put('index.html', c)); return res; })
-      .catch(() => caches.match('index.html')));
-    return;
-  }
-  e.respondWith(
-    fetch(req, { cache: 'no-cache' })
-      .then(res => { if (res && res.ok) { const c = res.clone(); caches.open(VERSION).then(ca => ca.put(req, c)); } return res; })
-      .catch(() => caches.match(req))
-  );
+  if (url.pathname.endsWith('/version.json')) return;     // يذهب للشبكة مباشرة دائماً
+  e.respondWith(siteFile(req));
 });

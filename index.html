@@ -50,7 +50,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Poppins:wght@600;700&display=swap">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2.8.0">
 </head>
 <body>
 
@@ -163,12 +163,12 @@
 
           <div class="langbar">
             <label class="sr" for="srcLang">من</label>
-            <div class="lang-col"><select id="srcLang"></select><select id="srcVar" class="var" hidden></select></div>
+            <select id="srcLang"></select>
             <button id="swapBtn" class="icon-btn swap" type="button" aria-label="تبديل اللغتين" title="تبديل اللغتين">
               <svg class="ic" aria-hidden="true"><use href="#i-swap"/></svg>
             </button>
             <label class="sr" for="tgtLang">إلى</label>
-            <div class="lang-col"><select id="tgtLang"></select><select id="tgtVar" class="var" hidden></select></div>
+            <select id="tgtLang"></select>
           </div>
 
           <p id="modeLine" class="modeline"></p>
@@ -189,6 +189,8 @@
               <button id="camBtn" class="icon-btn" type="button" aria-label="ترجمة نص من صورة" title="ترجمة نص من صورة">
                 <svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg>
               </button>
+              <button id="fileBtn" class="icon-btn" type="button" aria-label="فتح ملف نصي" title="فتح ملف نصي (txt)"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg></button>
+              <input id="txtFile" type="file" accept=".txt,.md,.csv,.srt,.vtt,text/plain" hidden>
               <button id="pasteBtn" class="icon-btn" type="button" aria-label="لصق من الحافظة" title="لصق">
                 <svg class="ic" aria-hidden="true"><use href="#i-clipboard"/></svg>
               </button>
@@ -222,6 +224,7 @@
         <div class="toolbar">
           <input id="favFilter" type="search" placeholder="ابحث في المحفوظات" aria-label="بحث في المفضلة">
           <button id="favExport" class="mini" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>تصدير</button>
+          <button id="favCsv" class="mini" type="button"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>CSV</button>
           <button id="favImport" class="mini" type="button"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg>استيراد</button>
           <input id="importFile" type="file" accept="application/json,.json" hidden>
         </div>
@@ -372,7 +375,23 @@
           </div>
         </div>
 
-        <p class="hint center">Languway — الإصدار 2.4</p>
+        <div class="card group">
+          <h2 class="h2">النسخ الاحتياطي والتحديث</h2>
+          <p class="hint">احفظ مفضلتك وإعداداتك وإحصاءاتك في ملف، واستعدها على أي جهاز.</p>
+          <div class="btn-row">
+            <button id="bkExport" class="ghost" type="button">حفظ نسخة احتياطية</button>
+            <button id="bkImport" class="ghost" type="button">استعادة نسخة</button>
+            <input id="bkFile" type="file" accept="application/json,.json" hidden>
+            <button id="chkUpd" class="ghost" type="button">فحص التحديثات</button>
+          </div>
+        </div>
+
+        <div class="card group" id="aboutCard">
+          <h2 class="h2">عن مترجم Languway</h2>
+          <div id="aboutBox"></div>
+        </div>
+
+        <p class="hint center">Languway — الإصدار <span id="appVer"></span></p>
       </section>
     </main>
   </div>
@@ -413,6 +432,6 @@
 
 <div id="toast" class="toast" role="status" hidden></div>
 
-<script src="script.js"></script>
+<script src="script.js?v=2.8.0" defer></script>
 </body>
 </html>
