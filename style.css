@@ -652,3 +652,29 @@ body.modal-open { overflow: hidden; }
 .type-res.ok { color: var(--ok, #15803d); }
 .type-res.no { color: var(--bad, #b91c1c); }
 #aboutBox .h2 { margin-top: 14px; }
+
+/* v2.9: الإعدادات كبطاقات، تطبيقاتنا، عبارات جاهزة */
+.set-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (min-width: 900px) { .set-grid { grid-template-columns: repeat(3, 1fr); } }
+.set-card { display: flex; flex-direction: column; gap: 4px; text-align: start; padding: 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); color: inherit; font: inherit; cursor: pointer; box-shadow: 0 10px 30px -20px rgba(20, 40, 120, .45); transition: transform .15s ease, box-shadow .15s ease; }
+.set-card:active { transform: scale(.98); }
+.set-card b { font-size: 1rem; }
+.set-card > span:last-child { color: var(--muted); font-size: .82rem; line-height: 1.5; }
+.set-card .tile-ic { margin-bottom: 6px; }
+.set-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.set-back .ic { transform: scaleX(-1); }
+[dir="rtl"] .set-back .ic { transform: none; }
+.set-panel .card { margin-bottom: 12px; }
+.products { display: grid; gap: 12px; margin-top: 12px; }
+.prod { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); color: inherit; text-decoration: none; }
+a.prod:hover { border-color: var(--brand-2, #1b9be8); }
+.prod.soon { opacity: .7; }
+.prod-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 14px; background: #fff; border: 1px solid var(--line); padding: 4px; flex: none; }
+.prod-txt { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.prod-txt span { color: var(--muted); font-size: .85rem; }
+.prod-tag { padding: 6px 14px; border-radius: 99px; font-size: .82rem; font-weight: 700; background: var(--chip, rgba(120,130,200,.14)); color: var(--muted); white-space: nowrap; }
+.prod-tag.on { background: var(--grad, linear-gradient(135deg, #1b2fa8, #00bcd4)); color: #fff; }
+.phrases { display: grid; gap: 8px; margin-top: 10px; }
+.phrase { text-align: start; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: inherit; font: inherit; cursor: pointer; }
+.chip.on { background: var(--brand, #1b2fa8); color: #fff; }
+[data-motion="off"] *, [data-motion="off"] *::before, [data-motion="off"] *::after { animation: none !important; transition: none !important; }

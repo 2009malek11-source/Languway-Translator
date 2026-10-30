@@ -5,7 +5,7 @@
    - نتائج الترجمة والقاموس: الشبكة أولاً ثم آخر نسخة محفوظة
    - version.json لا يُخزَّن أبداً: الصفحة تقارن به لتعرض رسالة «يوجد تحديث»
    ========================================================== */
-const VERSION = 'languway-v11';          // يُغيَّر مع كل إصدار، ويطابق APP_VERSION في script.js
+const VERSION = 'languway-v12';          // يُغيَّر مع كل إصدار، ويطابق APP_VERSION في script.js
 const API_CACHE = 'languway-api';
 const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-192.png', 'icon-maskable-512.png'];
 const API_HOSTS = ['api.mymemory.translated.net', 'api.dictionaryapi.dev', 'en.wiktionary.org', 'ar.wiktionary.org', 'tatoeba.org'];

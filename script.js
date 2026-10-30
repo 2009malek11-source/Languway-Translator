@@ -22,7 +22,7 @@
   const LANG = Object.fromEntries(LANGS.map(([c, n, v]) => [c, { name: n, voice: v }]));
   const RTL = new Set(['ar', 'fa', 'ur']);
   const dirOf = l => (RTL.has(l) ? 'rtl' : 'ltr');
-  const APP_VERSION = '2.8.0';                 // يطابق version.json وsw.js
+  const APP_VERSION = '2.9.0';                 // يطابق version.json وsw.js
   const mmCode = c => (c === 'zh' ? 'zh-CN' : c);
 
   const POS_AR = {
@@ -93,7 +93,8 @@
   const DEFAULTS = {
     src: 'en', tgt: 'ar', theme: 'auto', fontScale: 100, autoSpeak: false, rate: 0.9, voice: '',
     showExamples: true, maxExamples: 3, showSenses: true, showInflections: true,
-    useAI: true, cache: true, historyMax: 15, dailyGoal: 10
+    useAI: true, cache: true, historyMax: 15, dailyGoal: 10,
+    qFont: 'normal', reduceMotion: false, micAuto: true, quizLen: 10, favSort: 'new'
   };
   let settings = { ...DEFAULTS, ...store.get('settings', {}) };
   const saveSettings = () => store.set('settings', settings);
@@ -103,6 +104,9 @@
     if (settings.theme === 'auto') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', settings.theme);
     root.style.fontSize = settings.fontScale + '%';
+    root.setAttribute('data-motion', settings.reduceMotion ? 'off' : 'on');
+    const qe = $('#q');
+    if (qe) qe.style.fontSize = ({ normal: '', large: '1.4rem', xl: '1.8rem' })[settings.qFont] || '';
     updateModeLine();
     updateThemeToggle();
   }
@@ -665,6 +669,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     const box = $('#favList');
     const q = clean($('#favFilter').value).toLowerCase();
     const list = getFavs().filter(f => !q || f.text.toLowerCase().includes(q) || f.translation.toLowerCase().includes(q));
+    if (settings.favSort === 'alpha') list.sort((a, b) => a.text.localeCompare(b.text));
     if (!list.length) {
       box.replaceChildren(h('p', { class: 'empty' }, q ? 'لا توجد نتائج مطابقة.' : 'لا توجد كلمات محفوظة بعد. ابحث عن كلمة ثم اضغط النجمة لحفظها.'));
       return;
@@ -1195,6 +1200,17 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     $('#longOut').hidden = true;
     $('#ws').classList.remove('has-out');
   }
+  const lback = { key: '', busy: false, text: '', err: '' };
+  // ترجمة عكسية: نعيد النص المترجم إلى لغته الأصلية لتتأكد أن المعنى بقي كما هو
+  async function backCheck(s, full) {
+    if (lback.busy) return;
+    Object.assign(lback, { key: s.text, busy: true, text: '', err: '' });
+    paintLong(s);
+    try { lback.text = await mmTranslateChunk(full.slice(0, 1400), s.tgt, s.src); }
+    catch { lback.err = 'تعذّرت الترجمة العكسية الآن.'; }
+    lback.busy = false;
+    if (lback.key === s.text) paintLong(s);
+  }
   const lrule = { key: '', busy: false, text: '', err: '' };
   async function explainLong(s, full) {
     if (lrule.busy) return;
@@ -1208,7 +1224,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     if (lrule.key === s.text) paintLong(s);
   }
   async function doLong(text) {
-    lrule.key = ''; lrule.text = ''; lrule.err = '';
+    lrule.key = ''; lrule.text = ''; lrule.err = ''; lback.key = ''; lback.text = ''; lback.err = '';
     const id = ++seq;
     const { src, tgt } = pickLangs(text);
     $('#result').replaceChildren();
@@ -1240,6 +1256,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         h('span', { class: 'grow' }),
         speakBtn,
         iconBtn('copy', 'نسخ الترجمة', () => copyText(full)),
+        iconBtn('share', 'مشاركة الترجمة', () => shareText(full)),
         iconBtn('download', 'حفظ الترجمة كملف نصي', () => downloadBlob(new Blob([full], { type: 'text/plain;charset=utf-8' }), 'languway-translation.txt')),
         iconBtn('swap', 'استخدم الترجمة كنص أصلي', () => {
           $('#q').value = full; $('#srcLang').value = s.tgt; $('#tgtLang').value = s.src === 'auto' ? 'en' : s.src; syncLangs(); syncQ(); hideLong(); $('#result').replaceChildren(); $('#q').focus();
@@ -1248,6 +1265,10 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
       s.busy ? h('p', { class: 'ai-status' }, h('span', { class: 'dot' }), `جارٍ الترجمة… ${done} / ${s.packs.length}`) : null,
       !s.busy && s.failed.size ? h('p', { class: 'ai-status warn' }, 'تعذّرت ترجمة جزء من النص وبقي كما هو.',
         h('button', { type: 'button', class: 'mini', onclick: () => doLong(s.text) }, icon('translate'), 'أعد المحاولة')) : null,
+      !s.busy ? h('div', { class: 'long-rule' },
+        lback.key === s.text && lback.text ? h('div', { class: 'explain' }, h('b', {}, `الترجمة العكسية إلى ${LANG[s.src].name}`), h('p', { class: 'rule-text', dir: dirOf(s.src), lang: s.src }, lback.text)) : null,
+        lback.key === s.text && lback.err ? h('p', { class: 'ai-status warn' }, lback.err) : null,
+        h('button', { type: 'button', class: 'mini', disabled: lback.busy && lback.key === s.text, onclick: () => backCheck(s, full) }, icon('swap'), lback.busy && lback.key === s.text ? 'جارٍ التحقق…' : 'تحقق بالترجمة العكسية')) : null,
       !s.busy && aiReady() ? h('div', { class: 'long-rule' },
         lrule.key === s.text && lrule.text ? h('div', { class: 'explain' }, h('b', {}, 'القاعدة ولماذا هذه الكلمات؟'), h('p', { class: 'rule-text' }, lrule.text)) : null,
         lrule.key === s.text && lrule.busy ? h('p', { class: 'ai-status' }, h('span', { class: 'dot' }), 'جارٍ شرح القاعدة… قد يستغرق حتى دقيقة.') : null,
@@ -1316,6 +1337,8 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
   const SILENT_MSG = 'الإملاء الصوتي لا يستجيب في هذا المتصفح. ' + KEYBOARD_MIC;
 
   /* ----- الإملاء بالصوت في مربع الكتابة: جلسات قصيرة متتابعة (أثبت على أندرويد وآيفون من الوضع المستمر) ----- */
+  // الأيقونة: ميكروفون عند الجاهزية، ومربع إيقاف أثناء التسجيل
+  const setMicIcon = (btn, on) => { const u = btn.querySelector('use'); if (u) u.setAttribute('href', on ? '#i-stop' : '#i-mic'); };
   const mic = { ctl: null, on: false, base: '', t0: 0, got: false, fail: false, silent: 0 };
   function micUI(on) {
     const b = $('#micBtn');
@@ -1323,6 +1346,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     b.setAttribute('aria-pressed', String(on));
     b.setAttribute('aria-label', on ? 'إيقاف الإملاء' : 'إملاء بالصوت');
     b.title = b.getAttribute('aria-label');
+    setMicIcon(b, on);
   }
   function micStart() {
     const why = srBlocked();
@@ -1359,12 +1383,12 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     const ok = mic.got && !mic.fail;
     mic.on = false; mic.ctl = null;
     micUI(false);
-    if (ok) translateNow($('#q').value);
+    if (ok && settings.micAuto) translateNow($('#q').value);
   }
 
   /* ----- محادثة صوتية بين لغتين (مثل وضع المحادثة في مترجم جوجل) ----- */
   const conv = { a: 'ar', b: 'en', ctl: null, side: '', busy: false };
-  const convEnd = () => { if (conv.ctl) { conv.ctl.abort(); conv.ctl = null; } conv.side = ''; $$('#convCard .conv-mic').forEach(b => b.classList.remove('rec')); };
+  const convEnd = () => { if (conv.ctl) { conv.ctl.abort(); conv.ctl = null; } conv.side = ''; $$('#convCard .conv-mic').forEach(b => { b.classList.remove('rec'); setMicIcon(b, false); }); };
   async function convSay(side, text) {
     const from = side === 'a' ? conv.a : conv.b, to = side === 'a' ? conv.b : conv.a;
     text = clean(text);
@@ -1390,7 +1414,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     if (why) { toast(why, 7000); return; }
     stopSpeak();
     conv.side = side;
-    $(`#convCard .conv-mic[data-side="${side}"]`).classList.add('rec');
+    { const cb = $(`#convCard .conv-mic[data-side="${side}"]`); cb.classList.add('rec'); setMicIcon(cb, true); }
     let last = '';
     const ctl = listenOnce(srLang(side === 'a' ? conv.a : conv.b), {
       text: t => { last = t; $('#convLive').textContent = t; },
@@ -1580,7 +1604,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     // نحتاج إجابتين مختلفتين على الأقل لبناء الخيارات
     if (mode !== 'type' && new Set(getFavs().map(f => (mode === 'fwd' ? f.translation : f.text))).size < 2) { toast('احفظ كلمات بمعانٍ مختلفة لبدء الاختبار'); return; }
     quiz.mode = mode;
-    quiz.items = shuffle(getFavs()).slice(0, 10);
+    quiz.items = shuffle(getFavs()).slice(0, Number(settings.quizLen) || 10);
     quiz.i = 0;
     quiz.score = 0;
     renderQuestion();
@@ -1669,6 +1693,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     if (name === 'dash') renderDash();
     if (name === 'cards') renderCards();
     if (name === 'install') updateInstallUI();
+    if (name === 'settings') openSet('');
     window.scrollTo(0, 0);
   }
 
@@ -1738,6 +1763,31 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
       };
       c.addEventListener(c.type === 'range' || c.type === 'text' || c.type === 'password' ? 'input' : 'change', handler);
     });
+  }
+
+  /* ---------- الإعدادات كبطاقات: تظهر القائمة، وعند الضغط يفتح قسم واحد ---------- */
+  function openSet(name) {
+    $('#setHome').hidden = !!name;
+    $$('.set-panel').forEach(p => { p.hidden = p.dataset.panel !== name; });
+    window.scrollTo(0, 0);
+  }
+  // تطبيقات Languway: الشعار يُحمَّل من موقع التطبيق نفسه، وإن تعذّر نستعمل الشعار المحلي
+  const PRODUCTS = [
+    { name: 'Languway English', ar: 'الإنجليزية', desc: 'دورة إنجليزية مجانية بـ 30 مستوى', url: 'https://2009malek11-source.github.io/Languway-English/', logo: 'https://2009malek11-source.github.io/Languway-English/logo-light.png', live: true },
+    { name: 'Languway Spanish', ar: 'الإسبانية', desc: 'تعلّم الإسبانية بالأسلوب نفسه' },
+    { name: 'Languway French', ar: 'الفرنسية', desc: 'تعلّم الفرنسية بالأسلوب نفسه' },
+    { name: 'Languway German', ar: 'الألمانية', desc: 'تعلّم الألمانية بالأسلوب نفسه' }
+  ];
+  function renderProducts() {
+    $('#productsBox').replaceChildren(...PRODUCTS.map(p => {
+      const logo = h('img', { class: 'prod-logo', src: p.logo || 'logo-mark.png', alt: '', width: 56, height: 56, loading: 'lazy' });
+      logo.addEventListener('error', () => { if (!logo.src.endsWith('logo-mark.png')) logo.src = 'logo-mark.png'; });
+      const body = [logo, h('div', { class: 'prod-txt' }, h('b', {}, p.name), h('span', {}, p.live ? p.desc : `${p.desc} — ستتوفر قريباً`)),
+        h('span', { class: 'prod-tag' + (p.live ? ' on' : '') }, p.live ? 'افتح' : 'قريباً')];
+      return p.live
+        ? h('a', { class: 'prod', href: p.url, target: '_blank', rel: 'noopener' }, ...body)
+        : h('div', { class: 'prod soon', 'aria-disabled': 'true' }, ...body);
+    }));
   }
 
   function confirmThen(msg, fn) { if (window.confirm(msg)) fn(); }
@@ -1811,6 +1861,28 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     return h('div', { class: 'card' }, h('h2', { class: 'h2 flush' }, `شاراتك (${got}/${list.length})`),
       h('div', { class: 'badges' }, list.map(([ic, t, on]) => h('span', { class: 'badge' + (on ? ' on' : ''), title: on ? 'مُنجَزة' : 'لم تُنجَز بعد' }, h('i', {}, ic), t))));
   }
+  // عبارات جاهزة: اضغط عبارة فتُترجم إلى لغتك الهدف وتُنطق
+  const PHRASES = {
+    'تحية': ['السلام عليكم', 'كيف حالك؟', 'سعدت بلقائك', 'شكراً جزيلاً', 'عفواً، لم أفهم'],
+    'سفر': ['أين المطار؟', 'كم يبعد الفندق؟', 'أريد تذكرة ذهاب وعودة', 'هل يمكنك مساعدتي؟', 'أين أقرب محطة؟'],
+    'مطعم': ['أريد طاولة لشخصين', 'ما هو طبق اليوم؟', 'الحساب من فضلك', 'بدون سكر من فضلك', 'هل يوجد طعام حلال؟'],
+    'تسوق': ['كم السعر؟', 'هل يوجد مقاس أكبر؟', 'هل تقبلون البطاقة؟', 'هل يمكن التخفيض؟', 'أريد استرجاع هذا'],
+    'طوارئ': ['أحتاج إلى مساعدة', 'اتصل بالإسعاف', 'أين أقرب مستشفى؟', 'لقد ضاعت حقيبتي', 'أحتاج إلى طبيب']
+  };
+  let phraseCat = 'تحية';
+  function phrasebookCard() {
+    const wrap = h('div', { class: 'card' });
+    const paint = () => {
+      wrap.replaceChildren(h('h2', { class: 'h2 flush' }, 'عبارات جاهزة'),
+        h('div', { class: 'recent' }, Object.keys(PHRASES).map(k => h('button', { type: 'button', class: 'chip' + (k === phraseCat ? ' on' : ''), onclick: () => { phraseCat = k; paint(); } }, k))),
+        h('div', { class: 'phrases' }, PHRASES[phraseCat].map(t => h('button', { type: 'button', class: 'phrase', onclick: () => {
+          const tgt = $('#tgtLang').value === 'ar' ? 'en' : $('#tgtLang').value;
+          $('#srcLang').value = 'ar'; $('#tgtLang').value = tgt; $('#q').value = t; syncLangs(); showView('search'); translateNow(t);
+        } }, t))));
+    };
+    paint();
+    return wrap;
+  }
   function renderDash() {
     const st = store.get('stats', { total: 0, days: {} });
     const days = st.days || {};
@@ -1860,6 +1932,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         stat('cards', dueCards().length, 'بطاقات مستحقة'),
         stat('target', (store.get('best', 0)) + '٪', 'أفضل نتيجة اختبار')),
       wcard,
+      phrasebookCard(),
       badgesCard(st, days),
       h('div', { class: 'card' }, h('h2', { class: 'h2 flush' }, 'نشاطك هذا الأسبوع'), h('div', { class: 'week' }, cols)),
       isStandalone() ? null : h('button', { class: 'go wide', type: 'button', onclick: () => showView('install') }, icon('download'), 'ثبّت Languway على جهازك'));
@@ -1930,7 +2003,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     btn.dataset.state = 'run';
     let done = 0;
     try {
-      const cache = await caches.open('languway-v11');
+      const cache = await caches.open('languway-v12');
       for (const f of SHELL_FILES) {
         if (offlineAbort) break;
         try { const r = await fetch(f, { cache: 'reload' }); if (r.ok) await cache.put(f, r); } catch { /* ملف اختياري */ }
@@ -2002,6 +2075,10 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     renderRecent();
     renderAbout();
     $('#appVer').textContent = APP_VERSION;
+    $('#appVer2').textContent = APP_VERSION;
+    renderProducts();
+    $$('.set-card').forEach(b => b.addEventListener('click', () => openSet(b.dataset.set)));
+    $$('.set-back').forEach(b => b.addEventListener('click', () => openSet('')));
     if (/^\?u=/.test(location.search)) history.replaceState(null, '', location.pathname);
     loadVoices();
     if ('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', loadVoices);
