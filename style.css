@@ -631,3 +631,10 @@ body.modal-open { overflow: hidden; }
 .conv-mic.rec { background: #d93a3a; color: #fff; border-color: transparent; animation: pulse 1.2s infinite; }
 .conv-type { display: flex; gap: 6px; margin-top: 10px; align-items: center; }
 .conv-type input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: inherit; font: inherit; }
+
+/* الصيغة الإقليمية تحت اللغة */
+.langbar .lang-col { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.langbar .lang-col select { width: 100%; }
+.langbar select.var { font-size: .82rem; padding-block: 6px; opacity: .95; }
+.langbar { align-items: start; }
+.langbar .swap { margin-top: 4px; }
