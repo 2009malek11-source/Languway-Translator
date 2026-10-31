@@ -39,7 +39,7 @@ salad|سلطة|la salade|la ensalada|der Salat
 breakfast|فطور|le petit-déjeuner|el desayuno|das Frühstück
 lunch|غداء|le déjeuner|el almuerzo|das Mittagessen
 dinner|عشاء|le dîner|la cena|das Abendessen
-juice|عصير|le jus|el zumo|der Saft
+juice|عصير|le jus|el zumo/el jugo|der Saft
 house|بيت/منزل|la maison|la casa|das Haus
 home|منزل|la maison|el hogar|das Zuhause
 door|باب|la porte|la puerta|die Tür
@@ -164,7 +164,7 @@ full|ممتلئ|plein|lleno|voll
 empty|فارغ|vide|vacío|leer
 clean|نظيف|propre|limpio|sauber
 dirty|متسخ|sale|sucio|schmutzig
-right|صحيح/يمين|correct/droit|correcto/derecho|richtig/recht
+right|صحيح/يمين|correct/droit|correcto/derecho|richtig/rechts
 left|يسار|gauche|izquierdo|links
 true|صحيح/حقيقي|vrai|verdadero|wahr
 false|خاطئ/كاذب|faux|falso|falsch
@@ -300,7 +300,7 @@ sing|يغني|chanter|cantar|singen
 dance|يرقص|danser|bailar|tanzen
 swim|يسبح|nager|nadar|schwimmen
 fly|يطير|voler|volar|fliegen
-drive|يقود|conduire|conducir|fahren
+drive|يقود|conduire|conducir/manejar|fahren
 ride|يركب|monter|montar|reiten
 climb|يتسلق|grimper|escalar|klettern
 fall|يسقط|tomber|caer|fallen
@@ -331,7 +331,7 @@ explain|يشرح|expliquer|explicar|erklären
 repeat|يكرر|répéter|repetir|wiederholen
 practice|يتدرب|s'entraîner|practicar|üben
 study|يدرس|étudier|estudiar|studieren
-car|سيارة|la voiture|el coche|das Auto
+car|سيارة|la voiture|el coche/el carro|das Auto
 bus|حافلة|le bus|el autobús|der Bus
 train|قطار|le train|el tren|der Zug
 plane|طائرة|l'avion|el avión|das Flugzeug
@@ -364,7 +364,7 @@ passport|جواز سفر|le passeport|el pasaporte|der Reisepass
 bag|حقيبة|le sac|la bolsa|die Tasche
 suitcase|حقيبة سفر|la valise|la maleta|der Koffer
 phone|هاتف|le téléphone|el teléfono|das Telefon
-computer|حاسوب|l'ordinateur|el ordenador|der Computer
+computer|حاسوب|l'ordinateur|el ordenador/la computadora|der Computer
 internet|إنترنت|l'internet|el internet|das Internet
 email|بريد إلكتروني|le courriel|el correo electrónico|die E-Mail
 message|رسالة|le message|el mensaje|die Nachricht
@@ -557,8 +557,8 @@ he|هو|il|él|er
 she|هي|elle|ella|sie
 we|نحن|nous|nosotros|wir
 they|هم|ils|ellos|sie
-my|لي/ي|mon|mi|mein
-your|لك/ك|ton/votre|tu|dein
+my|لي|mon|mi|mein
+your|لك|ton/votre|tu|dein
 this|هذا|ce|este|dieser
 that|ذلك|cela|eso|das
 north|شمال|le nord|el norte|der Norden

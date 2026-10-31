@@ -1058,7 +1058,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     renderSkeleton();
     let m = (aiReady() && cacheGet(cKey(text, src, tgt, 'ai'))) || cacheGet(cKey(text, src, tgt, 'f'));
     if (!m) {
-      try { m = await buildFree(text, src, tgt); cacheSet(cKey(text, src, tgt, 'f'), m); } catch (e) { console.error('buildFree', e && e.message); m = null; }
+      try { m = await buildFree(text, src, tgt); cacheSet(cKey(text, src, tgt, 'f'), m); } catch (e) { if (!e || e.message !== 'nodata') console.error('buildFree', e && e.message); m = null; }
     }
     if (id !== seq) return;
     const needAI = aiReady() && (!m || m.mode !== 'ai');
