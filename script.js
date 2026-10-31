@@ -1139,7 +1139,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
       let first = true;
       const add = t => { toks.push({ t, nl: first }); first = false; };
       if (size(line) <= max) { add(line); return; }
-      for (const s of line.split(/(?<=[.!?؟。！？…])\s+/)) {
+      for (const s of (line.match(/[^\s][\s\S]*?(?:[.!?؟。！？…]+(?=\s|$)|$)/g) || [line])) {
         if (size(s) <= max) { add(s); continue; }
         let rest = s;
         while (rest) {
