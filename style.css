@@ -485,6 +485,7 @@ body { overflow-x: clip; }
 .pane-in textarea {
   display: block; width: 100%; min-height: clamp(220px, 40vh, 460px); max-height: 60vh; margin: 0; padding: 18px 20px 8px; border: 0; outline: 0; resize: vertical;
   background: transparent; color: var(--ink); font: inherit; font-size: clamp(1.15rem, 1rem + .6vw, 1.5rem); line-height: 1.7; overflow-y: auto;
+  unicode-bidi: plaintext; text-align: start;
 }
 .pane-in textarea::placeholder { color: var(--muted); opacity: .8; }
 .pane-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; padding: 6px 10px 10px; }

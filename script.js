@@ -1094,8 +1094,8 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
   }
   function syncKeyboard() {
     const q = $('#q'), v = $('#srcLang').value;
-    if (v === 'auto' || !settings.kbLang) { q.removeAttribute('lang'); q.setAttribute('dir', v === 'auto' ? 'auto' : dirOf(v)); return; }
-    q.setAttribute('lang', v); q.setAttribute('dir', dirOf(v));
+    if (v === 'auto' || !settings.kbLang) q.removeAttribute('lang'); else q.setAttribute('lang', v);
+    q.setAttribute('dir', q.value || v === 'auto' ? 'auto' : dirOf(v));
   }
   function syncLangs() {
     syncKeyboard();
@@ -1117,6 +1117,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     const q = $('#q');
     $('#qCount').textContent = `${q.value.length.toLocaleString('en-US')} / ${MAX_LONG.toLocaleString('en-US')}`;
     $('#clearQ').hidden = !q.value;
+    syncKeyboard();
     q.style.height = 'auto';
     q.style.height = Math.min(q.scrollHeight, Math.round(innerHeight * 0.6)) + 'px';
   }
@@ -1402,7 +1403,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     };
     const micBtn = side => h('button', { type: 'button', class: 'conv-mic', 'data-side': side, onclick: () => convToggle(side) },
       icon('mic'), h('span', { 'data-name': side }, LANG[conv[side]].name));
-    const input = h('input', { type: 'text', id: 'convIn', maxlength: 400, placeholder: 'أو اكتب جملة ثم اختر اللغة…', autocomplete: 'off', enterkeyhint: 'send' });
+    const input = h('input', { type: 'text', id: 'convIn', dir: 'auto', maxlength: 400, placeholder: 'أو اكتب جملة ثم اختر اللغة…', autocomplete: 'off', enterkeyhint: 'send' });
     const send = side => h('button', { type: 'button', class: 'mini', onclick: () => { const v = input.value; input.value = ''; convSay(side, v); } }, h('span', { 'data-name': side }, LANG[conv[side]].name));
     $('#convCard').replaceChildren(
       h('div', { class: 'sheet-head' }, h('h2', { class: 'h2 flush' }, 'محادثة بين لغتين'),
