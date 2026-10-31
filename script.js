@@ -55,7 +55,9 @@
     del(k) { try { localStorage.removeItem('lw_' + k); } catch {  } }
   };
   let toastTimer;
-  function toast(msg, ms = 3000) {
+  function toast(msg, ms) {
+    ms = ms || Number(settings.toastMs) || 3000;
+    if (settings.haptics && navigator.vibrate) { try { navigator.vibrate(12); } catch {  } }
     const t = $('#toast');
     t.textContent = msg;
     t.hidden = false;
@@ -76,7 +78,10 @@
     src: 'en', tgt: 'ar', theme: 'auto', fontScale: 100, autoSpeak: false, rate: 0.9, voice: '',
     showExamples: true, maxExamples: 3, showSenses: true, showInflections: true,
     useAI: true, closed: false, cache: true, historyMax: 15, dailyGoal: 10,
-    qFont: 'normal', reduceMotion: false, micAuto: true, quizLen: 10, favSort: 'new'
+    qFont: 'normal', reduceMotion: false, micAuto: true, quizLen: 10, favSort: 'new',
+    rememberPair: true, kbLang: true, enterKey: 'translate', accent: 'blue', density: 'normal', haptics: false, toastMs: 3000,
+    statsOn: true, startView: 'search', showPhonetic: true, showSynonyms: true, showRegional: true, showRules: true, showBack: true,
+    showRecent: true, showDaily: true, confirmDel: true
   };
   function cleanSettings(o) {
     const out = {};
@@ -85,7 +90,7 @@
       if (!Object.prototype.hasOwnProperty.call(o, k)) continue;
       const d = DEFAULTS[k], v = o[k];
       if (typeof d === 'boolean' && typeof v === 'boolean') out[k] = v;
-      else if (typeof d === 'number' && typeof v === 'number' && Number.isFinite(v)) out[k] = Math.max(0, Math.min(1000, v));
+      else if (typeof d === 'number' && typeof v === 'number' && Number.isFinite(v)) out[k] = Math.max(0, Math.min(100000, v));
       else if (typeof d === 'string' && typeof v === 'string') out[k] = v.slice(0, 40);
     }
     return out;
@@ -98,6 +103,9 @@
     else root.setAttribute('data-theme', settings.theme);
     root.style.fontSize = settings.fontScale + '%';
     root.setAttribute('data-motion', settings.reduceMotion ? 'off' : 'on');
+    root.setAttribute('data-accent', settings.accent);
+    root.setAttribute('data-density', settings.density);
+    const rc = $('#recent'); if (rc) rc.hidden = !settings.showRecent;
     const qe = $('#q');
     if (qe) qe.style.fontSize = ({ normal: '', large: '1.4rem', xl: '1.8rem' })[settings.qFont] || '';
     updateModeLine();
@@ -285,20 +293,51 @@
     const res = await Promise.allSettled(items.map(t => mmTranslate(t, from, to)));
     return res.map(r => (r.status === 'fulfilled' ? r.value.main : ''));
   }
-  const LX = { en2ar: null, ar2en: null };
+  const LX = { idx: null, rows: null };
   const PH_LANGS = ['ar', 'en', 'fr', 'es', 'de'];
+  const W_COL = { en: 0, ar: 1, fr: 2, es: 3, de: 4 };
   const punctOff = x => fold(clean(x)).replace(/[?؟.!,،;:"“”«»]+/g, '').replace(/\s+/g, ' ').trim();
+  const lexKey = (w, lang) => {
+    let k = clean(w).toLowerCase().replace(/\s*\((verb|noun)\)$/, '').replace(/[’]/g, "'");
+    if (lang === 'ar') return fold(k).replace(/^ال(?=.{3})/, '');
+    k = k.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
+    if (lang === 'fr') k = k.replace(/^(le|la|les|l'|un|une|des) ?/, '');
+    else if (lang === 'es') k = k.replace(/^(el|la|los|las|un|una) /, '');
+    else if (lang === 'de') k = k.replace(/^(der|die|das|ein|eine) /, '');
+    return k.trim();
+  };
   function lexInit() {
-    if (LX.en2ar) return;
-    LX.en2ar = new Map(); LX.ar2en = new Map();
+    if (LX.idx) return;
+    LX.rows = []; LX.idx = {};
+    PH_LANGS.forEach(l => { LX.idx[l] = new Map(); });
     String((self.LW_LEX && self.LW_LEX.words) || '').split('\n').forEach(line => {
-      const i = line.indexOf('=');
-      if (i < 1) return;
-      const en = line.slice(0, i).trim().toLowerCase(), ar = line.slice(i + 1).split('|').map(x => x.trim()).filter(Boolean);
-      if (!en || !ar.length) return;
-      if (!LX.en2ar.has(en)) LX.en2ar.set(en, ar);
-      ar.forEach(a => { const k = fold(a); const cur = LX.ar2en.get(k) || []; if (!cur.includes(en)) { cur.push(en); LX.ar2en.set(k, cur); } });
+      const p = line.split('|');
+      if (p.length !== 5) return;
+      const row = [p[0], p[1], p[2], p[3], p[4]].map(c => c.split('/').map(x => x.trim()).filter(Boolean));
+      if (row.some(c => !c.length)) return;
+      const n = LX.rows.push(row) - 1;
+      PH_LANGS.forEach(l => row[W_COL[l]].forEach(alt => {
+        const k = lexKey(alt, l);
+        if (!k) return;
+        const cur = LX.idx[l].get(k);
+        if (!cur) LX.idx[l].set(k, [n]); else if (!cur.includes(n)) cur.push(n);
+      }));
     });
+  }
+  function lexFind(text, src, tgt) {
+    if (!(src in W_COL) || !(tgt in W_COL) || src === tgt) return null;
+    lexInit();
+    let hits = LX.idx[src].get(lexKey(text, src)), note = '';
+    if (!hits && src === 'en') {
+      const tl = clean(text).toLowerCase();
+      for (const [re, add] of [[/ies$/, 'y'], [/(es|s)$/, ''], [/(.)\1ing$/, '$1'], [/(.)\1ed$/, '$1'], [/ing$/, ''], [/ing$/, 'e'], [/ed$/, ''], [/ed$/, 'e'], [/ly$/, '']]) {
+        if (re.test(tl)) { const base = tl.replace(re, add); const h = LX.idx.en.get(lexKey(base, 'en')); if (h) { hits = h; note = `صيغة مشتقة من «${base}».`; break; } }
+      }
+    }
+    if (!hits) return null;
+    const out = [];
+    hits.forEach(n => LX.rows[n][W_COL[tgt]].forEach(x => { if (!out.includes(x)) out.push(x); }));
+    return { list: out, note };
   }
   function phraseRow(text, src) {
     const si = PH_LANGS.indexOf(src);
@@ -312,26 +351,20 @@
     const ti = PH_LANGS.indexOf(tgt);
     const row = phraseRow(text, src);
     if (row && ti >= 0) { m.translation = row[ti]; m.sources.push('القاموس الداخلي'); m.regional = regionalDiff(text, src); m.local = localRules(text, src); return m; }
-    let list = null, note = '';
-    const t = fold(clean(text)).replace(/^ال(?=.{3})/, '');
-    const tl = clean(text).toLowerCase();
-    if (src === 'en' && tgt === 'ar') {
-      list = LX.en2ar.get(tl);
-      if (!list) {
-        const cand = [[/ies$/, 'y'], [/(es|s)$/, ''], [/ing$/, ''], [/ing$/, 'e'], [/ed$/, ''], [/ed$/, 'e'], [/ly$/, '']];
-        for (const [re, add] of cand) { if (re.test(tl)) { const base = tl.replace(re, add); if (LX.en2ar.has(base)) { list = LX.en2ar.get(base); note = `صيغة مشتقة من «${base}».`; break; } } }
-      }
-    } else if (src === 'ar' && tgt === 'en') {
-      list = LX.ar2en.get(fold(clean(text))) || LX.ar2en.get(t);
-    }
-    if (!list || !list.length) throw new Error('nodata');
-    m.translation = list[0]; m.alts = list.slice(1, 5); m.notes = note; m.sources.push('القاموس الداخلي');
+    const f = lexFind(text, src, tgt);
+    if (!f) throw new Error('nodata');
+    m.translation = f.list[0]; m.alts = f.list.slice(1, 5); m.notes = f.note; m.sources.push('القاموس الداخلي');
     m.regional = regionalDiff(text, src); m.local = localRules(text, src);
     return m;
   }
   async function buildFree(text, src, tgt) {
     if (settings.closed) return internalModel(text, src, tgt);
     try { const row = phraseRow(text, src); if (row && PH_LANGS.indexOf(tgt) >= 0) return internalModel(text, src, tgt); } catch {  }
+    try { return await buildExternal(text, src, tgt); } catch (e) {
+      try { return internalModel(text, src, tgt); } catch { throw e; }
+    }
+  }
+  async function buildExternal(text, src, tgt) {
     const m = baseModel('free', text, src, tgt);
     const single = !/\s/.test(text);
     const [trR, wR, dR, tR, aR] = await Promise.allSettled([
@@ -733,7 +766,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     card.append(h('div', { class: 'entry-head' },
       h('div', {},
         h('h2', { class: 'word', dir: dirOf(m.src), lang: m.src }, h('span', { class: 'mk' }, m.text)),
-        m.phonetic && h('p', { class: 'phon', dir: 'ltr' }, m.phonetic),
+        settings.showPhonetic && m.phonetic && h('p', { class: 'phon', dir: 'ltr' }, m.phonetic),
         m.pos && h('span', { class: 'pos' }, m.pos)),
       h('div', { class: 'entry-tools' },
         iconBtn('volume', 'نطق الكلمة', () => speak(m.text, m.src)),
@@ -748,11 +781,11 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         iconBtn('slow', 'نطق بطيء', () => speak(m.translation, m.tgt, 0.5))));
     }
     if (m.alts.length) card.append(h('div', { class: 'alts', dir: dirOf(m.tgt) }, m.alts.map(a => h('span', {}, a))));
-    if (m.regional.length) {
+    if (settings.showRegional && m.regional.length) {
       card.append(section('الفروق بين الصيغ',
         h('div', { class: 'regional' }, m.regional.map(x => h('div', { class: 'reg' }, h('span', { class: 'lbl' }, x.region), h('b', { dir: dirOf(m.src), lang: m.src }, x.form))))));
     }
-    if (m.local.length) {
+    if (settings.showRules && m.local.length) {
       card.append(section('قاعدة سريعة', m.local.map(t => h('p', { class: 'explain' }, t))));
     }
     if (status === 'loading') card.append(h('div', { class: 'ai-status' }, h('span', { class: 'dot' }), 'جارٍ الشرح بالذكاء الاصطناعي… قد يستغرق حتى دقيقة، والترجمة أعلاه جاهزة.'));
@@ -817,8 +850,8 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         h('table', { class: 'infl' }, h('tbody', {}, m.inflections.map(r => h('tr', {}, h('td', {}, r.label), h('td', { dir: dirOf(m.src) }, r.form))))),
         m.inflNote && h('p', { class: 'hint' }, m.inflNote)));
     }
-    if (m.synonyms.length) card.append(section('المرادفات', h('div', { class: 'alts', dir: dirOf(m.src) }, m.synonyms.map(x => h('span', {}, x)))));
-    if (m.antonyms.length) card.append(section('الأضداد', h('div', { class: 'alts', dir: dirOf(m.src) }, m.antonyms.map(x => h('span', {}, x)))));
+    if (settings.showSynonyms && m.synonyms.length) card.append(section('المرادفات', h('div', { class: 'alts', dir: dirOf(m.src) }, m.synonyms.map(x => h('span', {}, x)))));
+    if (settings.showSynonyms && m.antonyms.length) card.append(section('الأضداد', h('div', { class: 'alts', dir: dirOf(m.src) }, m.antonyms.map(x => h('span', {}, x)))));
     if (m.variants.length) {
       card.append(section('اللهجات والاختلافات الإقليمية',
         h('table', { class: 'infl' }, h('tbody', {}, m.variants.map(r => h('tr', {}, h('td', {}, r.region), h('td', {}, r.form)))))));
@@ -1055,17 +1088,25 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     $('#tgtLang').replaceChildren(...mk(false).filter(Boolean));
     $('#srcLang').value = settings.src;
     $('#tgtLang').value = settings.tgt;
+    const a = $('#s-src'), b = $('#s-tgt');
+    if (a) { a.replaceChildren(...mk(true).filter(Boolean)); a.value = settings.src; }
+    if (b) { b.replaceChildren(...mk(false).filter(Boolean)); b.value = settings.tgt; }
   }
   function syncKeyboard() {
     const q = $('#q'), v = $('#srcLang').value;
-    if (v === 'auto') { q.removeAttribute('lang'); q.setAttribute('dir', 'auto'); return; }
+    if (v === 'auto' || !settings.kbLang) { q.removeAttribute('lang'); q.setAttribute('dir', v === 'auto' ? 'auto' : dirOf(v)); return; }
     q.setAttribute('lang', v); q.setAttribute('dir', dirOf(v));
   }
   function syncLangs() {
     syncKeyboard();
-    settings.src = $('#srcLang').value;
-    settings.tgt = $('#tgtLang').value;
-    saveSettings();
+    if (settings.rememberPair) {
+      settings.src = $('#srcLang').value;
+      settings.tgt = $('#tgtLang').value;
+      saveSettings();
+      const a = $('#s-src'), b = $('#s-tgt');
+      if (a) a.value = settings.src;
+      if (b) b.value = settings.tgt;
+    }
   }
   const MAX_LONG = 5000;
   const isShort = t => t.length <= 300 && !t.includes('\n');
@@ -1196,7 +1237,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
       s.busy ? h('p', { class: 'ai-status' }, h('span', { class: 'dot' }), `جارٍ الترجمة… ${done} / ${s.packs.length}`) : null,
       !s.busy && s.failed.size ? h('p', { class: 'ai-status warn' }, 'تعذّرت ترجمة جزء من النص وبقي كما هو.',
         h('button', { type: 'button', class: 'mini', onclick: () => doLong(s.text) }, icon('translate'), 'أعد المحاولة')) : null,
-      !s.busy ? h('div', { class: 'long-rule' },
+      !s.busy && settings.showBack ? h('div', { class: 'long-rule' },
         lback.key === s.text && lback.text ? h('div', { class: 'explain' }, h('b', {}, `الترجمة العكسية إلى ${LANG[s.src].name}`), h('p', { class: 'rule-text', dir: dirOf(s.src), lang: s.src }, lback.text)) : null,
         lback.key === s.text && lback.err ? h('p', { class: 'ai-status warn' }, lback.err) : null,
         h('button', { type: 'button', class: 'mini', disabled: lback.busy && lback.key === s.text, onclick: () => backCheck(s, full) }, icon('swap'), lback.busy && lback.key === s.text ? 'جارٍ التحقق…' : 'تحقق بالترجمة العكسية')) : null,
@@ -1664,6 +1705,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
       const handler = () => {
         settings[k] = c.type === 'checkbox' ? c.checked : numeric ? Number(c.value) : c.value.trim();
         saveSettings();
+        if (k === 'src' || k === 'tgt') { $(k === 'src' ? '#srcLang' : '#tgtLang').value = settings[k]; syncKeyboard(); }
         applySettings();
         show();
       };
@@ -1691,7 +1733,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         : h('div', { class: 'prod soon', 'aria-disabled': 'true' }, ...body);
     }));
   }
-  function confirmThen(msg, fn) { if (window.confirm(msg)) fn(); }
+  function confirmThen(msg, fn) { if (!settings.confirmDel || window.confirm(msg)) fn(); }
   const prefersDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = () => settings.theme === 'dark' || (settings.theme === 'auto' && prefersDark());
   function updateThemeToggle() {
@@ -1710,6 +1752,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
   }
   const dayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   function trackSearch() {
+    if (!settings.statsOn) return;
     const st = store.get('stats', { total: 0, days: {} });
     st.total = (st.total || 0) + 1;
     st.days = st.days || {};
@@ -1817,7 +1860,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         stat('star', getFavs().length, 'كلمات محفوظة'),
         stat('cards', dueCards().length, 'بطاقات مستحقة'),
         stat('target', (store.get('best', 0)) + '٪', 'أفضل نتيجة اختبار')),
-      wcard,
+      settings.showDaily ? wcard : null,
       phrasebookCard(),
       badgesCard(st, days),
       h('div', { class: 'card' }, h('h2', { class: 'h2 flush' }, 'نشاطك هذا الأسبوع'), h('div', { class: 'week' }, cols)),
@@ -1874,7 +1917,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         iconBtn('volume', 'نطق', () => speak(it.text, it.src)),
         iconBtn('slow', 'نطق بطيء', () => speak(it.text, it.src, 0.5))));
   }
-  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'og-image.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
+  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'lexicon.js', 'brand.woff', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
   let offlineAbort = null;
   async function prepareOffline() {
     const btn = $('#offlineBtn');
@@ -1951,7 +1994,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     renderRecent();
     renderAbout();
     renderProducts();
-    $$('.set-card').forEach(b => b.addEventListener('click', () => openSet(b.dataset.set)));
+    $$('.set-card[data-set]').forEach(b => b.addEventListener('click', () => openSet(b.dataset.set)));
     $$('.set-back').forEach(b => b.addEventListener('click', () => openSet('')));
     if (/^\?u=/.test(location.search)) history.replaceState(null, '', location.pathname);
     loadVoices();
@@ -1960,6 +2003,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     $('#q').addEventListener('input', syncQ);
     $('#q').addEventListener('keydown', e => {
       if (e.key !== 'Enter' || e.isComposing || e.shiftKey) return;
+      if (settings.enterKey === 'newline' && !(e.ctrlKey || e.metaKey)) return;
       if (e.ctrlKey || e.metaKey || isShort(cleanLong($('#q').value))) { e.preventDefault(); translateNow($('#q').value); $('#q').blur(); }
     });
     $('#clearQ').addEventListener('click', () => { if (mic.on) micStop(); $('#q').value = ''; syncQ(); hideLong(); $('#q').focus(); });
@@ -2102,6 +2146,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     if (sp) setTimeout(() => { sp.classList.add('hide'); setTimeout(() => sp.remove(), 700); }, 1500);
     const v = new URLSearchParams(location.search).get('view');
     if (['dash', 'favs', 'quiz', 'cards', 'install', 'settings'].includes(v)) showView(v);
+    else if (['dash', 'favs', 'quiz', 'cards'].includes(settings.startView)) showView(settings.startView);
     if ('serviceWorker' in navigator && window.isSecureContext) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').then(reg => {

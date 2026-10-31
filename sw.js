@@ -1,7 +1,7 @@
 
 const VERSION = 'lw-k7q4m2x9';
 const API_CACHE = 'languway-api';
-const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'lexicon.js', 'fonts/brand.woff', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'logo-english.png', 'logo-spanish.png', 'logo-french.png', 'favicon.ico', 'icon-maskable-192.png', 'icon-maskable-512.png'];
+const SHELL = ['./', 'index.html', 'style.css', 'script.js', 'lexicon.js', 'brand.woff', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'logo-english.png', 'logo-spanish.png', 'logo-french.png', 'qr.png', 'favicon.ico', 'icon-maskable-192.png', 'icon-maskable-512.png'];
 const API_HOSTS = ['api.mymemory.translated.net', 'api.dictionaryapi.dev', 'en.wiktionary.org', 'ar.wiktionary.org', 'tatoeba.org'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION)

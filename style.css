@@ -1,4 +1,4 @@
-@font-face { font-family: "LWBrand"; src: url("fonts/brand.woff") format("woff"); font-weight: 700 800; font-display: swap; }
+@font-face { font-family: "LWBrand"; src: url("brand.woff") format("woff"); font-weight: 700 800; font-display: swap; }
 :root {
   --bg: #F3F7FF;
   --surface: #FFFFFF;
@@ -577,3 +577,17 @@ a.prod:hover { border-color: var(--brand-2, #1b9be8); }
 .chip.on { background: var(--brand, #1b2fa8); color: #fff; }
 [data-motion="off"] *, [data-motion="off"] *::before, [data-motion="off"] *::after { animation: none !important; transition: none !important; }
 .prod-logo.empty { display: inline-block; border-style: dashed; background: transparent; }
+[data-accent="green"] { --brand: #0F7B4F; --brand-2: #2DC98A; --accent: #12915E; --grad: linear-gradient(135deg, #0F7B4F 0%, #17A672 55%, #2DC98A 100%); --mark: rgba(45, 201, 138, .28); }
+[data-accent="purple"] { --brand: #5B2FB0; --brand-2: #B07CFF; --accent: #6C3CD0; --grad: linear-gradient(135deg, #5B2FB0 0%, #7E4FE0 55%, #B07CFF 100%); --mark: rgba(176, 124, 255, .28); }
+[data-accent="orange"] { --brand: #B5560F; --brand-2: #FFA43D; --accent: #D2650F; --grad: linear-gradient(135deg, #B5560F 0%, #E67A1C 55%, #FFA43D 100%); --mark: rgba(255, 164, 61, .3); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-accent="green"] { --accent: #4FD39C; }
+  :root:not([data-theme="light"])[data-accent="purple"] { --accent: #B391FF; }
+  :root:not([data-theme="light"])[data-accent="orange"] { --accent: #FFB566; }
+}
+:root[data-theme="dark"][data-accent="green"] { --accent: #4FD39C; }
+:root[data-theme="dark"][data-accent="purple"] { --accent: #B391FF; }
+:root[data-theme="dark"][data-accent="orange"] { --accent: #FFB566; }
+[data-density="compact"] .card { padding: 12px; }
+[data-density="compact"] .row { padding-top: 6px; padding-bottom: 6px; }
+[data-density="compact"] .sec { margin-top: 8px; }

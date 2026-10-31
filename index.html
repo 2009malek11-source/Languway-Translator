@@ -13,13 +13,9 @@
   <meta property="og:title" content="مترجم Languway — ترجم وتعلّم">
   <meta property="og:description" content="مترجم ومعلّم لغوي تفاعلي: المعنى والجمل والتصريفات والاختبارات والنطق.">
   <meta property="og:url" content="https://2009malek11-source.github.io/Languway-Translator/">
-  <meta property="og:image" content="https://2009malek11-source.github.io/Languway-Translator/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
   <meta property="og:locale" content="ar_AR">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="مترجم Languway — ترجم وتعلّم">
-  <meta name="twitter:image" content="https://2009malek11-source.github.io/Languway-Translator/og-image.png">
   
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval' blob:; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://api.mymemory.translated.net https://api.dictionaryapi.dev https://en.wiktionary.org https://ar.wiktionary.org https://tatoeba.org https://text.pollinations.ai https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; manifest-src 'self'; worker-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
   <meta name="referrer" content="no-referrer">
@@ -34,14 +30,6 @@
   <link rel="icon" type="image/png" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   
-  <link rel="apple-touch-startup-image" href="splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-  <link rel="apple-touch-startup-image" href="splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
   <link rel="stylesheet" href="style.css?b=k7q4m2x9">
 </head>
 <body>
@@ -291,6 +279,7 @@
         <h1 class="h">الإعدادات</h1>
         
         <div id="setHome" class="set-grid">
+          <button class="set-card" type="button" data-set="lang"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-translate"/></svg></span><b>لغة المترجم</b><span>اللغة الأساسية ولغة الهدف</span></button>
           <button class="set-card" type="button" data-set="look"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg></span><b>المظهر والعرض</b><span>السمة وحجم الخط وتقليل الحركة</span></button>
           <button class="set-card" type="button" data-set="translate"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-translate"/></svg></span><b>الترجمة والنتائج</b><span>ما يظهر في النتيجة وخيارات الإملاء</span></button>
           <button class="set-card" type="button" data-set="voice"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg></span><b>النطق والصوت</b><span>السرعة والصوت والنطق التلقائي</span></button>
@@ -298,11 +287,22 @@
           <button class="set-card" type="button" data-set="learn"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg></span><b>المفضلة والاختبار</b><span>الهدف اليومي وطول الاختبار والترتيب</span></button>
           <button class="set-card" type="button" data-set="data"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></span><b>البيانات والتحديث</b><span>نسخة احتياطية وتحديث ومسح</span></button>
           <button class="set-card" type="button" data-set="privacy"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-gear"/></svg></span><b>الخصوصية والأمان</b><span>الوضع المغلق وحذف بياناتك</span></button>
+          <button class="set-card" type="button" data-nav="install"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></span><b>التثبيت والمشاركة</b><span>التثبيت والرابط والباركود</span></button>
           <button class="set-card" type="button" data-set="works"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg></span><b>من إنجازاتنا</b><span>تطبيقات Languway الأخرى</span></button>
           <button class="set-card" type="button" data-set="about"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg></span><b>عن مترجم Languway</b><span>الميزات والمنجزات</span></button>
         </div>
         
         <div id="setPanels">
+          <section class="set-panel" data-panel="lang" hidden>
+            <div class="set-head"><button class="icon-btn set-back" type="button" aria-label="رجوع"><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button><h2 class="h2 flush">لغة المترجم</h2></div>
+            <div class="card group">
+              <div class="row"><label for="s-src">اللغة الأساسية (التي أكتب بها)</label><select id="s-src" data-key="src"></select></div>
+              <div class="row"><label for="s-tgt">لغة الترجمة (التي أترجم إليها)</label><select id="s-tgt" data-key="tgt"></select></div>
+              <div class="row"><label for="s-remember">تذكّر آخر زوج لغات استعملته</label><input id="s-remember" type="checkbox" data-key="rememberPair"></div>
+              <div class="row"><label for="s-kb">تبديل لغة لوحة المفاتيح مع لغة الكتابة</label><input id="s-kb" type="checkbox" data-key="kbLang"></div>
+              <p class="hint">مثلاً: اللغة الأساسية الإنجليزية ولغة الترجمة العربية. عند إطفاء «تذكّر آخر زوج» يبدأ الموقع دائماً بهذين الاختيارين.</p>
+            </div>
+          </section>
           <section class="set-panel" data-panel="look" hidden>
             <div class="set-head"><button class="icon-btn set-back" type="button" aria-label="رجوع"><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button><h2 class="h2 flush">المظهر والعرض</h2></div>
             <div class="card group">
@@ -313,6 +313,17 @@
               <div class="row"><label for="s-qfont">حجم خط مربع الكتابة</label>
                 <select id="s-qfont" data-key="qFont"><option value="normal">عادي</option><option value="large">كبير</option><option value="xl">كبير جداً</option></select></div>
               <div class="row"><label for="s-motion">تقليل الحركة والحركات المتحركة</label><input id="s-motion" type="checkbox" data-key="reduceMotion"></div>
+              <div class="row"><label for="s-accent">لون الواجهة</label>
+                <select id="s-accent" data-key="accent"><option value="blue">أزرق</option><option value="green">أخضر</option><option value="purple">بنفسجي</option><option value="orange">برتقالي</option></select></div>
+              <div class="row"><label for="s-dens">كثافة العرض</label>
+                <select id="s-dens" data-key="density"><option value="normal">عادية</option><option value="compact">مضغوطة</option></select></div>
+              <div class="row"><label for="s-recent">إظهار عمليات البحث الأخيرة</label><input id="s-recent" type="checkbox" data-key="showRecent"></div>
+              <div class="row"><label for="s-daily">إظهار كلمة اليوم في لوحتي</label><input id="s-daily" type="checkbox" data-key="showDaily"></div>
+              <div class="row"><label for="s-start">الصفحة التي يفتح عليها الموقع</label>
+                <select id="s-start" data-key="startView"><option value="search">الترجمة</option><option value="dash">لوحتي</option><option value="favs">المفضلة</option><option value="quiz">اختبار سريع</option><option value="cards">بطاقات المراجعة</option></select></div>
+              <div class="row"><label for="s-hap">اهتزاز خفيف مع الإشعارات</label><input id="s-hap" type="checkbox" data-key="haptics"></div>
+              <div class="row"><label for="s-toast">مدة ظهور الإشعارات</label>
+                <select id="s-toast" data-key="toastMs"><option value="2000">قصيرة</option><option value="3000">عادية</option><option value="5000">طويلة</option></select></div>
             </div>
           </section>
           <section class="set-panel" data-panel="translate" hidden>
@@ -324,6 +335,13 @@
                 <select id="s-exn" data-key="maxExamples"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
               <div class="row"><label for="s-sen">إظهار فروق المعاني</label><input id="s-sen" type="checkbox" data-key="showSenses"></div>
               <div class="row"><label for="s-inf">إظهار التصريفات</label><input id="s-inf" type="checkbox" data-key="showInflections"></div>
+              <div class="row"><label for="s-enter">مفتاح Enter في مربع الكتابة</label>
+                <select id="s-enter" data-key="enterKey"><option value="translate">يترجم</option><option value="newline">سطر جديد (والترجمة بـ Ctrl+Enter)</option></select></div>
+              <div class="row"><label for="s-phon">إظهار طريقة النطق المكتوبة</label><input id="s-phon" type="checkbox" data-key="showPhonetic"></div>
+              <div class="row"><label for="s-syn">إظهار المرادفات والأضداد</label><input id="s-syn" type="checkbox" data-key="showSynonyms"></div>
+              <div class="row"><label for="s-reg">إظهار الفروق بين الصيغ الإقليمية</label><input id="s-reg" type="checkbox" data-key="showRegional"></div>
+              <div class="row"><label for="s-rules">إظهار «قاعدة سريعة»</label><input id="s-rules" type="checkbox" data-key="showRules"></div>
+              <div class="row"><label for="s-back">إظهار زر الترجمة العكسية للنصوص الطويلة</label><input id="s-back" type="checkbox" data-key="showBack"></div>
               <div class="row"><label for="s-hist">عدد عمليات البحث الأخيرة</label>
                 <select id="s-hist" data-key="historyMax"><option value="0">بدون سجل</option><option value="8">8</option><option value="15">15</option><option value="30">30</option></select></div>
             </div>
@@ -351,6 +369,8 @@
                 <select id="s-goal" data-key="dailyGoal"><option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="30">30</option></select></div>
               <div class="row"><label for="s-qlen">عدد أسئلة الاختبار</label>
                 <select id="s-qlen" data-key="quizLen"><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20">20</option></select></div>
+              <div class="row"><label for="s-stats">حساب إحصاءات البحث في لوحتي</label><input id="s-stats" type="checkbox" data-key="statsOn"></div>
+              <div class="row"><label for="s-conf">طلب تأكيد قبل الحذف</label><input id="s-conf" type="checkbox" data-key="confirmDel"></div>
               <div class="row"><label for="s-fsort">ترتيب المفضلة</label>
                 <select id="s-fsort" data-key="favSort"><option value="new">الأحدث أولاً</option><option value="alpha">أبجدياً</option></select></div>
             </div>
@@ -404,6 +424,10 @@
           <section class="set-panel" data-panel="about" hidden>
             <div class="set-head"><button class="icon-btn set-back" type="button" aria-label="رجوع"><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button><h2 class="h2 flush">عن مترجم Languway</h2></div>
             <div class="card group" id="aboutCard"><div id="aboutBox"></div></div>
+            <div class="card group">
+              <h3 class="h2">المصادر والتراخيص</h3>
+              <p class="hint">عند تشغيل الخدمات الخارجية يستعمل الموقع: ويكاموس (Wiktionary) بترخيص CC BY-SA 4.0، وجمل Tatoeba بترخيص CC BY 2.0 FR، وواجهة Free Dictionary API، وخدمة MyMemory للترجمة، وخدمة Pollinations للشرح الذكي، ومكتبة Tesseract.js (Apache 2.0) لقراءة الصور. خط الشعار Poppins بترخيص SIL OFL 1.1. القاموس الداخلي والشعارات من إنتاج Languway.</p>
+            </div>
           </section>
         </div>
       </section>
