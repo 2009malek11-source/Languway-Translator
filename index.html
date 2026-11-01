@@ -279,7 +279,7 @@
         <h1 class="h">الإعدادات</h1>
         
         <div id="setHome" class="set-grid">
-          <button class="set-card" type="button" data-set="lang"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-translate"/></svg></span><b>لغة المترجم</b><span>اللغة الأساسية ولغة الهدف</span></button>
+          <button class="set-card" type="button" data-set="lang"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-translate"/></svg></span><b>لغة المترجم</b><span>لغة الموقع واللغة الأساسية ولغة الهدف</span></button>
           <button class="set-card" type="button" data-set="look"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg></span><b>المظهر والعرض</b><span>السمة وحجم الخط وتقليل الحركة</span></button>
           <button class="set-card" type="button" data-set="translate"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-translate"/></svg></span><b>الترجمة والنتائج</b><span>ما يظهر في النتيجة وخيارات الإملاء</span></button>
           <button class="set-card" type="button" data-set="voice"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg></span><b>النطق والصوت</b><span>السرعة والصوت والنطق التلقائي</span></button>
@@ -295,6 +295,11 @@
         <div id="setPanels">
           <section class="set-panel" data-panel="lang" hidden>
             <div class="set-head"><button class="icon-btn set-back" type="button" aria-label="رجوع"><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button><h2 class="h2 flush">لغة المترجم</h2></div>
+            <div class="card group">
+              <div class="row"><label for="s-ui">لغة الموقع (لغة الأزرار والنصوص)</label>
+                <select id="s-ui" data-key="uiLang" data-notr><option value="ar">العربية</option><option value="en">English</option><option value="fr">Français</option><option value="es">Español</option><option value="de">Deutsch</option></select></div>
+              <p class="hint">يغيّر لغة كل ما يظهر في الموقع: الإعدادات والأزرار والرسائل. أما الترجمة نفسها فتتبع اللغتين اللتين تختارهما في الأسفل.</p>
+            </div>
             <div class="card group">
               <div class="row"><label for="s-src">اللغة الأساسية (التي أكتب بها)</label><select id="s-src" data-key="src"></select></div>
               <div class="row"><label for="s-tgt">لغة الترجمة (التي أترجم إليها)</label><select id="s-tgt" data-key="tgt"></select></div>
@@ -464,6 +469,7 @@
 <div id="convSheet" class="sheet" role="dialog" aria-modal="true" hidden><div id="convCard" class="sheet-card"></div></div>
 <div id="toast" class="toast" role="status" hidden></div>
 <script src="lexicon.js?b=k7q4m2x9" defer></script>
+<script src="ui-text.js?b=k7q4m2x9" defer></script>
 <script src="script.js?b=k7q4m2x9" defer></script>
 </body>
 </html>

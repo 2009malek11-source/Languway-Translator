@@ -79,7 +79,7 @@
     showExamples: true, maxExamples: 3, showSenses: true, showInflections: true,
     useAI: true, closed: false, cache: true, historyMax: 15, dailyGoal: 10,
     qFont: 'normal', reduceMotion: false, micAuto: true, quizLen: 10, favSort: 'new',
-    rememberPair: true, kbLang: true, enterKey: 'translate', accent: 'blue', density: 'normal', haptics: false, toastMs: 3000,
+    rememberPair: true, uiLang: 'ar', kbLang: true, enterKey: 'translate', accent: 'blue', density: 'normal', haptics: false, toastMs: 3000,
     statsOn: true, startView: 'search', showPhonetic: true, showSynonyms: true, showRegional: true, showRules: true, showBack: true,
     showRecent: true, showDaily: true, confirmDel: true
   };
@@ -104,6 +104,7 @@
     root.style.fontSize = settings.fontScale + '%';
     root.setAttribute('data-motion', settings.reduceMotion ? 'off' : 'on');
     root.setAttribute('data-accent', settings.accent);
+    if (UI.lang !== settings.uiLang) uiSetLang(settings.uiLang);
     root.setAttribute('data-density', settings.density);
     const rc = $('#recent'); if (rc) rc.hidden = !settings.showRecent;
     const qe = $('#q');
@@ -117,6 +118,115 @@
       ? 'الوضع المغلق: لا يخرج أي نص من جهازك'
       : aiReady() ? 'الشرح الذكي مفعّل تلقائياً' : 'الوضع: قواميس مفتوحة';
   }
+  const UI_LANGS = ['ar', 'en', 'fr', 'es', 'de'];
+  const UI_LOC = { ar: 'ar', en: 'en', fr: 'fr', es: 'es', de: 'de' };
+  const UI = { lang: 'ar', map: new Map(), pats: [], nodes: new WeakMap(), attrs: new WeakMap(), obs: null, queued: false };
+  const hasAr = x => /[\u0600-\u06FF]/.test(x);
+  const squash = x => x.replace(/\s+/g, ' ').trim();
+  const esc = x => x.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
+  function uiLoad(lang) {
+    UI.map = new Map(); UI.pats = [];
+    const tbl = lang !== 'ar' && self.LW_UI && self.LW_UI[lang];
+    if (!tbl) return;
+    for (const k of Object.keys(tbl)) {
+      if (k.includes('{')) {
+        const re = new RegExp('^' + k.split(/\{\d\}/).map(esc).join('(.+?)') + '$');
+        UI.pats.push({ re, out: tbl[k] });
+      } else UI.map.set(k, tbl[k]);
+    }
+  }
+  function tr(str) {
+    const raw = String(str);
+    if (UI.lang === 'ar' || !hasAr(raw)) return raw;
+    const t = squash(raw);
+    let r = UI.map.get(t);
+    if (r === undefined) {
+      for (const p of UI.pats) {
+        const m = p.re.exec(t);
+        if (m) { r = p.out.replace(/\{(\d)\}/g, (_, n) => tr(m[+n + 1])); break; }
+      }
+    }
+    if (r === undefined) return raw.replace(/٪/g, '%');
+    return raw.match(/^\s*/)[0] + r + raw.match(/\s*$/)[0];
+  }
+  const NO_TR = 'script,style,textarea,[data-notr],[lang],[dir]';
+  function skipNode(el) {
+    for (let e = el; e && e !== document.body && e !== document.documentElement; e = e.parentElement) if (e.matches(NO_TR)) return true;
+    return false;
+  }
+  function uiText(node) {
+    const el = node.parentElement;
+    if (!el || skipNode(el)) return;
+    let rec = UI.nodes.get(node);
+    if (rec && node.data !== rec.out) rec = null;
+    const src = rec ? rec.src : node.data;
+    if (!hasAr(src)) { if (rec) UI.nodes.delete(node); return; }
+    const out = tr(src);
+    if (out !== node.data) node.data = out;
+    UI.nodes.set(node, { src, out });
+  }
+  const TR_ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
+  function uiAttrs(el) {
+    if (el.closest && el.closest('[data-notr]')) return;
+    let rec = UI.attrs.get(el);
+    for (const a of TR_ATTRS) {
+      if (!el.hasAttribute(a)) continue;
+      const cur = el.getAttribute(a);
+      const old = rec && rec[a];
+      const src = old && old.out === cur ? old.src : cur;
+      if (!hasAr(src)) continue;
+      const out = tr(src);
+      if (out !== cur) el.setAttribute(a, out);
+      if (!rec) { rec = {}; UI.attrs.set(el, rec); }
+      rec[a] = { src, out };
+    }
+  }
+  function uiApply(root) {
+    root = root || document.documentElement;
+    if (root.nodeType === 3) { uiText(root); return; }
+    if (root.nodeType !== 1) return;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const list = [];
+    while (w.nextNode()) list.push(w.currentNode);
+    list.forEach(uiText);
+    uiAttrs(root);
+    root.querySelectorAll('[placeholder],[aria-label],[title],[alt]').forEach(uiAttrs);
+  }
+  function uiMeta() {
+    const base = UI.metaBase || (UI.metaBase = [...document.querySelectorAll('meta[name="description"],meta[property="og:title"],meta[property="og:description"],meta[name="twitter:title"],meta[name="twitter:description"],meta[property="og:site_name"]')].map(m => [m, m.getAttribute('content')]));
+    base.forEach(([m, v]) => m.setAttribute('content', tr(v)));
+  }
+  function uiSchedule(muts) {
+    if (UI.queued) return;
+    UI.queued = true;
+    Promise.resolve().then(() => {
+      UI.queued = false;
+      UI.obs && UI.obs.takeRecords();
+      if (UI.lang === 'ar') return;
+      uiApply(document.body);
+      UI.obs && UI.obs.takeRecords();
+    });
+  }
+  function uiSetLang(lang) {
+    if (!UI_LANGS.includes(lang)) lang = 'ar';
+    const prev = UI.lang;
+    UI.lang = lang;
+    const root = document.documentElement;
+    root.setAttribute('lang', UI_LOC[lang]);
+    root.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    uiLoad(lang);
+    if (!UI.obs && document.body) {
+      UI.obs = new MutationObserver(uiSchedule);
+      UI.obs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: TR_ATTRS });
+    }
+    if (document.body && (lang !== 'ar' || prev !== 'ar')) {
+      uiApply(document.documentElement);
+      uiMeta();
+      document.title = tr(UI.titleBase || (UI.titleBase = document.title));
+      UI.obs && UI.obs.takeRecords();
+    }
+  }
+  const T = x => tr(x);
   function utter(text, lang, rate) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = (LANG[lang] && LANG[lang].voice) || lang;
@@ -1084,11 +1194,13 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
   function fillLangSelects() {
     const mk = (withAuto) => [withAuto && h('option', { value: 'auto' }, 'كشف تلقائي'),
       ...LANGS.map(([c, n]) => h('option', { value: c }, n))];
+    ['#srcLang', '#tgtLang'].forEach(id => $(id).setAttribute('data-notr', ''));
     $('#srcLang').replaceChildren(...mk(true).filter(Boolean));
     $('#tgtLang').replaceChildren(...mk(false).filter(Boolean));
     $('#srcLang').value = settings.src;
     $('#tgtLang').value = settings.tgt;
     const a = $('#s-src'), b = $('#s-tgt');
+    if (a) a.setAttribute('data-notr', ''); if (b) b.setAttribute('data-notr', '');
     if (a) { a.replaceChildren(...mk(true).filter(Boolean)); a.value = settings.src; }
     if (b) { b.replaceChildren(...mk(false).filter(Boolean)); b.value = settings.tgt; }
   }
@@ -1719,10 +1831,10 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     window.scrollTo(0, 0);
   }
   const PRODUCTS = [
-    { name: 'Languway English', ar: 'الإنجليزية', desc: 'دورة إنجليزية مجانية بـ 30 مستوى', url: 'https://2009malek11-source.github.io/Languway-English/', logo: 'logo-english.png', live: true },
-    { name: 'Languway Spanish', ar: 'الإسبانية', desc: 'تعلّم الإسبانية بالأسلوب نفسه', logo: 'logo-spanish.png' },
-    { name: 'Languway French', ar: 'الفرنسية', desc: 'تعلّم الفرنسية بالأسلوب نفسه', logo: 'logo-french.png' },
-    { name: 'Languway German', ar: 'الألمانية', desc: 'تعلّم الألمانية بالأسلوب نفسه' }
+    { name: 'Languway English', desc: 'دورة إنجليزية مجانية بـ 30 مستوى', url: 'https://2009malek11-source.github.io/Languway-English/', logo: 'logo-english.png', live: true },
+    { name: 'Languway Spanish', desc: 'تعلّم الإسبانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-Spanish/', logo: 'logo-spanish.png', live: true },
+    { name: 'Languway French', desc: 'تعلّم الفرنسية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-French/', logo: 'logo-french.png', live: true },
+    { name: 'Languway German', desc: 'تعلّم الألمانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-German/', live: true }
   ];
   function renderProducts() {
     $('#productsBox').replaceChildren(...PRODUCTS.map(p => {
@@ -1734,7 +1846,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         : h('div', { class: 'prod soon', 'aria-disabled': 'true' }, ...body);
     }));
   }
-  function confirmThen(msg, fn) { if (!settings.confirmDel || window.confirm(msg)) fn(); }
+  function confirmThen(msg, fn) { if (!settings.confirmDel || window.confirm(T(msg))) fn(); }
   const prefersDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = () => settings.theme === 'dark' || (settings.theme === 'auto' && prefersDark());
   function updateThemeToggle() {
@@ -1835,7 +1947,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
       const bar = h('i', { title: String(n) });
       bar.style.height = Math.max(4, Math.round(n / max * 90)) + 'px';
       cols.push(h('div', { class: 'bar-col' + (i === 0 ? ' today' : '') }, bar,
-        h('span', {}, d.toLocaleDateString('ar', { weekday: 'short' }))));
+        h('span', {}, d.toLocaleDateString(UI_LOC[UI.lang] || 'ar', { weekday: 'short' }))));
     }
     const idx = Math.floor(Date.now() / 86400000) % WOTD.length;
     const [w, ar, ex] = WOTD[idx];
@@ -1918,7 +2030,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         iconBtn('volume', 'نطق', () => speak(it.text, it.src)),
         iconBtn('slow', 'نطق بطيء', () => speak(it.text, it.src, 0.5))));
   }
-  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'lexicon.js', 'brand.woff', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
+  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'lexicon.js', 'ui-text.js', 'brand.woff', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
   let offlineAbort = null;
   async function prepareOffline() {
     const btn = $('#offlineBtn');
