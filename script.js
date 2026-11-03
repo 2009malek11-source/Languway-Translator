@@ -79,7 +79,7 @@
     showExamples: true, maxExamples: 3, showSenses: true, showInflections: true,
     useAI: true, closed: false, cache: true, historyMax: 15, dailyGoal: 10,
     qFont: 'normal', reduceMotion: false, micAuto: true, quizLen: 10, favSort: 'new',
-    rememberPair: true, uiLang: 'ar', kbLang: true, enterKey: 'translate', accent: 'blue', density: 'normal', haptics: false, toastMs: 3000,
+    rememberPair: true, spell: true, uiLang: 'ar', kbLang: true, enterKey: 'translate', accent: 'blue', density: 'normal', haptics: false, toastMs: 3000,
     statsOn: true, startView: 'search', showPhonetic: true, showSynonyms: true, showRegional: true, showRules: true, showBack: true,
     showRecent: true, showDaily: true, confirmDel: true
   };
@@ -214,6 +214,17 @@
     const root = document.documentElement;
     root.setAttribute('lang', UI_LOC[lang]);
     root.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    if (lang !== 'ar' && !(self.LW_UI && self.LW_UI[lang])) {
+      if (!UI.loading) {
+        UI.loading = true;
+        const sc = document.createElement('script');
+        sc.src = 'ui-text.js?b=' + BUILD;
+        sc.onload = () => { UI.loading = false; uiSetLang(UI.lang); };
+        sc.onerror = () => { UI.loading = false; };
+        document.head.appendChild(sc);
+      }
+      return;
+    }
     uiLoad(lang);
     if (!UI.obs && document.body) {
       UI.obs = new MutationObserver(uiSchedule);
@@ -247,24 +258,36 @@
     speechSynthesis.getVoices().forEach(v => sel.append(h('option', { value: v.name }, `${v.name} (${v.lang})`)));
     sel.value = settings.voice || '';
   }
+  const LATIN_T = new Set(['en', 'fr', 'es', 'de', 'it', 'pt', 'tr']);
+  function mmGood(t, text, tgt) {
+    if (!t || /MYMEMORY WARNING|INVALID LANGUAGE|PLEASE SELECT|QUERY LENGTH LIMIT/i.test(t)) return false;
+    if (t.trim().toLowerCase() === text.trim().toLowerCase()) return false;
+    if (tgt === 'ar' && /[A-Za-z]/.test(text) && !/[\u0600-\u06FF]/.test(t)) return false;
+    if (LATIN_T.has(tgt) && /[\u0600-\u06FF]/.test(t)) return false;
+    if (!/\s/.test(text.trim()) && t.trim().split(/\s+/).length > 4) return false;
+    return true;
+  }
   async function mmTranslate(text, src, tgt) {
     const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) +
       '&langpair=' + encodeURIComponent(mmCode(src) + '|' + mmCode(tgt));
     const d = await getJSON(url);
-    const main = d && d.responseData && d.responseData.translatedText;
-    if (!main || Number(d.responseStatus) !== 200) throw new Error('mm');
+    const apiMain = d && d.responseData && d.responseData.translatedText;
+    if (!apiMain || Number(d.responseStatus) !== 200) throw new Error('mm');
+    const ms = A(d.matches, 10).slice().sort((x, y) => (Number(y && y.match) || 0) - (Number(x && x.match) || 0));
+    const pool = [S(apiMain, 1500), ...ms.map(m => S(m && m.translation, 1500))];
+    const main = pool.find(t => mmGood(t, text, tgt)) || pool[0];
     const seen = new Set([main.toLowerCase()]);
     const alts = [];
-    for (const m of A(d.matches, 10)) {
+    for (const m of ms) {
       const t = S(m && m.translation, 120);
-      if (t && t.length <= Math.max(30, text.length * 3) && !seen.has(t.toLowerCase())) { seen.add(t.toLowerCase()); alts.push(t); }
+      if (t && t.length <= Math.max(30, text.length * 3) && !seen.has(t.toLowerCase()) && mmGood(t, text, tgt)) { seen.add(t.toLowerCase()); alts.push(t); }
     }
     const ctx = [];
     for (const x of A(d.matches, 30)) {
       const seg = S(x && x.segment, 300), trn = S(x && x.translation, 300);
       if (seg && trn && seg.length > text.length + 8 && seg.length < 170 && fold(seg).includes(fold(text))) ctx.push({ text: seg, translation: trn });
     }
-    return { main: S(main, 1500), alts: alts.slice(0, 4), ctx: ctx.slice(0, 4) };
+    return { main, alts: alts.slice(0, 4), ctx: ctx.slice(0, 4) };
   }
   async function dictLookup(word) {
     try {
@@ -467,10 +490,21 @@
     m.regional = regionalDiff(text, src); m.local = localRules(text, src);
     return m;
   }
+  function lexBoost(m, text, src, tgt) {
+    if (!m || /\s/.test(clean(text))) return m;
+    const f = lexFind(text, src, tgt);
+    if (!f) return m;
+    const prev = [m.translation, ...(m.alts || [])].filter(Boolean);
+    const merged = [];
+    [...f.list, ...prev].forEach(x => { if (x && !merged.some(y => y.toLowerCase() === x.toLowerCase())) merged.push(x); });
+    m.translation = merged[0]; m.alts = merged.slice(1, 6);
+    if (!m.sources.includes('القاموس الداخلي')) m.sources.unshift('القاموس الداخلي');
+    return m;
+  }
   async function buildFree(text, src, tgt) {
     if (settings.closed) return internalModel(text, src, tgt);
     try { const row = phraseRow(text, src); if (row && PH_LANGS.indexOf(tgt) >= 0) return internalModel(text, src, tgt); } catch {  }
-    try { return await buildExternal(text, src, tgt); } catch (e) {
+    try { return lexBoost(await buildExternal(text, src, tgt), text, src, tgt); } catch (e) {
       try { return internalModel(text, src, tgt); } catch { throw e; }
     }
   }
@@ -1158,6 +1192,167 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     if (id !== seq) return;
     if (merged) { cacheSet(cKey(m.text, m.src, m.tgt, 'ai'), merged); render(merged, 'off'); } else render(m, 'failed');
   }
+  const SP = { set: null, list: null, loading: null, seq: 0 };
+  function spLoad() {
+    if (SP.set) return Promise.resolve(true);
+    if (SP.loading) return SP.loading;
+    SP.loading = new Promise(res => {
+      const sc = document.createElement('script');
+      sc.src = 'spell-en.js?b=' + BUILD;
+      sc.onload = () => {
+        try {
+          const d = (self.LW_SPELL && self.LW_SPELL.data) || '';
+          const list = []; let cur = '', prev = '';
+          for (let i = 0; i < d.length; i++) {
+            const c = d.charCodeAt(i);
+            if (c < 97) { if (cur) { list.push(cur); prev = cur; } cur = prev.slice(0, c - 65); }
+            else cur += d[i];
+          }
+          if (cur) list.push(cur);
+          SP.list = list; SP.set = new Set(list); res(true);
+        } catch { res(false); }
+      };
+      sc.onerror = () => { SP.loading = null; res(false); };
+      document.head.appendChild(sc);
+    });
+    return SP.loading;
+  }
+  function editDist(a, b, max) {
+    const la = a.length, lb = b.length;
+    if (Math.abs(la - lb) > max) return max + 1;
+    let p2 = null, p1 = Array.from({ length: lb + 1 }, (_, j) => j);
+    for (let i = 1; i <= la; i++) {
+      const cur = [i];
+      let rowMin = i;
+      for (let j = 1; j <= lb; j++) {
+        let v = Math.min(p1[j] + 1, cur[j - 1] + 1, p1[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (p2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, p2[j - 2] + 1);
+        cur[j] = v; if (v < rowMin) rowMin = v;
+      }
+      if (rowMin > max) return max + 1;
+      p2 = p1; p1 = cur;
+    }
+    return p1[lb];
+  }
+  const isVowel = c => 'aeiou'.includes(c);
+  function inflect(b, suf) {
+    const last = b[b.length - 1], pre = b[b.length - 2];
+    const cvc = b.length >= 3 && !isVowel(last) && !'wxy'.includes(last) && isVowel(pre) && !isVowel(b[b.length - 3]) && (b.match(/[aeiou]+/g) || []).length === 1;
+    if (suf === 's') return /(s|x|z|ch|sh)$/.test(b) ? b + 'es' : /[^aeiou]y$/.test(b) ? b.slice(0, -1) + 'ies' : b + 's';
+    if (suf === 'ing') return /[^e]e$/.test(b) ? b.slice(0, -1) + 'ing' : cvc ? b + last + 'ing' : b + 'ing';
+    if (suf === 'ed') return /e$/.test(b) ? b + 'd' : /[^aeiou]y$/.test(b) ? b.slice(0, -1) + 'ied' : cvc ? b + last + 'ed' : b + 'ed';
+    if (suf === 'er') return /e$/.test(b) ? b + 'r' : /[^aeiou]y$/.test(b) ? b.slice(0, -1) + 'ier' : cvc ? b + last + 'er' : b + 'er';
+    if (suf === 'est') return /e$/.test(b) ? b + 'st' : /[^aeiou]y$/.test(b) ? b.slice(0, -1) + 'iest' : cvc ? b + last + 'est' : b + 'est';
+    if (suf === 'ly') return /[^aeiou]y$/.test(b) ? b.slice(0, -1) + 'ily' : b + 'ly';
+    return b;
+  }
+  const COMMON_EN = new Set(('the be to of and a in that have i it for not on with he as you do at this but his by from they we say her she or an will my one all would there their what so up out if about who get which go me when make can like time no just him know take people into year your good some could them see other than then now look only come its over think also back after use two how our work first well way even new want because any these give day most us is are was were been has had did does said made went came').split(' '));
+  const sortL = x => x.split('').sort().join('');
+  function spKnown(w) {
+    if (SP.set.has(w)) return true;
+    if (w.endsWith("'s")) return SP.set.has(w.slice(0, -2));
+    const has = x => x.length >= 2 && SP.set.has(x);
+    const dbl = (b, suf) => b.length >= 3 && (b.match(/[aeiou]+/g) || []).length >= 2 && b + b[b.length - 1] + suf === w;
+    const forms = [
+      ['s', [w.slice(0, -1), w.slice(0, -2), w.slice(0, -3) + 'y']],
+      ['ing', [w.slice(0, -3), w.slice(0, -3) + 'e', w.slice(0, -4)]],
+      ['ed', [w.slice(0, -2), w.slice(0, -1), w.slice(0, -3), w.slice(0, -3) + 'y']],
+      ['er', [w.slice(0, -2), w.slice(0, -1), w.slice(0, -3), w.slice(0, -3) + 'y']],
+      ['est', [w.slice(0, -3), w.slice(0, -2), w.slice(0, -4), w.slice(0, -4) + 'y']],
+      ['ly', [w.slice(0, -2), w.slice(0, -3) + 'y', w.slice(0, -4) + 'al']]
+    ];
+    for (const [suf, cands] of forms) {
+      if (!w.endsWith(suf[0] === 's' ? 's' : suf) && !(suf === 'ed' && w.endsWith('ed')) ) continue;
+      for (const b of cands) if (has(b) && (inflect(b, suf) === w || dbl(b, suf))) return true;
+    }
+    if (/(ness|ment|ful|less)$/.test(w) && has(w.replace(/(ness|ment|ful|less)$/, ''))) return true;
+    return false;
+  }
+  function matchCase(orig, sug) { return orig[0] === orig[0].toUpperCase() && orig[0] !== orig[0].toLowerCase() ? sug[0].toUpperCase() + sug.slice(1) : sug; }
+  function spSuggest(word, n = 3) {
+    const w = word.toLowerCase();
+    const maxD = w.length <= 4 ? 1 : 2;
+    const found = new Map();
+    const add = (cand, d, bonus = 0) => {
+      const score = bonus + d * 10 + (cand[0] === w[0] ? 0 : 4) + Math.abs(cand.length - w.length) + (LX.idx && LX.idx.en && LX.idx.en.has(cand) ? -3 : 0) + (COMMON_EN.has(cand) ? -6 : 0) + (sortL(cand) === sortL(w) ? -4 : 0);
+      if (!found.has(cand) || found.get(cand) > score) found.set(cand, score);
+    };
+    for (const c of SP.list) { if (Math.abs(c.length - w.length) > maxD) continue; const d = editDist(w, c, maxD); if (d <= maxD && c !== w) add(c, d); }
+    const sufs = ['ing', 'ed', 'es', 's', 'ly', 'er', 'est'];
+    for (const suf of sufs) {
+      if (!w.endsWith(suf) || w.length - suf.length < 2) continue;
+      const stem = w.slice(0, -suf.length);
+      for (const b of SP.list) {
+        if (Math.abs(b.length - stem.length) > 2) continue;
+        if (editDist(stem, b, 1) > 1 && editDist(stem.replace(/(.)\1$/, '$1'), b, 1) > 1) continue;
+        const f = inflect(b, suf[0] === 'e' && suf !== 'er' && suf !== 'est' && suf !== 'es' ? 'ed' : suf === 'es' ? 's' : suf);
+        const d = editDist(w, f, maxD);
+        if (d <= maxD && f !== w && SP.set.has(b)) add(f, d, (suf === 'ing' || suf === 'ed') && COMMON_EN.has(b) ? -5 : 0);
+      }
+    }
+    return [...found.entries()].sort((a, b) => a[1] - b[1]).slice(0, n).map(x => matchCase(word, x[0]));
+  }
+  function spCheck(text) {
+    const out = [], seen = new Set();
+    const re = /[A-Za-z][A-Za-z']*/g;
+    let m;
+    while ((m = re.exec(text)) && out.length < 25) {
+      let w = m[0].replace(/'+$/, '');
+      const before = text[m.index - 1], after = text[m.index + m[0].length];
+      if (w.length < 3 || /\d/.test(before || '') || /\d/.test(after || '')) continue;
+      if (w !== w.toLowerCase() && w !== w.toUpperCase() && !/^[A-Z][a-z']+$/.test(w)) continue;
+      if (w === w.toUpperCase() && w.length <= 5) continue;
+      const startOfSentence = m.index === 0 || /[.!?\n]\s*$/.test(text.slice(0, m.index));
+      if (/^[A-Z]/.test(w) && !startOfSentence && !/^[A-Z]+$/.test(w)) continue;
+      const lw = w.toLowerCase();
+      if (seen.has(lw) || spKnown(lw)) continue;
+      seen.add(lw);
+      const sug = spSuggest(w);
+      if (sug.length) out.push({ word: w, sug });
+    }
+    return out;
+  }
+  function fixWord(from, to) {
+    const q = $('#q');
+    q.value = q.value.replace(new RegExp('\\b' + from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g'), to);
+    syncQ();
+  }
+  function lexSuggest(text, src) {
+    if (!(src in W_COL) || /\s/.test(clean(text))) return [];
+    lexInit();
+    const k = lexKey(text, src);
+    if (k.length < 3) return [];
+    const res = [];
+    for (const [key, rows] of LX.idx[src]) {
+      if (Math.abs(key.length - k.length) > 1) continue;
+      const d = editDist(k, key, 1);
+      if (d === 1) res.push(LX.rows[rows[0]][W_COL[src]][0]);
+      if (res.length >= 3) break;
+    }
+    return res;
+  }
+  function showSuggest(list, label) {
+    const box = $('#spellBox');
+    if (!list.length) { box.hidden = true; box.replaceChildren(); return; }
+    box.replaceChildren(h('span', { class: 'hint' }, label), ...list.map(x => h('button', { type: 'button', class: 'chip', onclick: () => { $('#q').value = x.to; syncQ(); translateNow(x.to); } }, x.label || x.to)));
+    box.hidden = false;
+  }
+  async function spellScan(text, src) {
+    const box = $('#spellBox');
+    box.hidden = true; box.replaceChildren();
+    if (!settings.spell || src !== 'en') return;
+    const my = ++SP.seq;
+    const ok = await spLoad();
+    if (!ok || my !== SP.seq) return;
+    lexInit();
+    const issues = spCheck(text);
+    if (!issues.length) return;
+    const single = issues.length === 1 && !/\s/.test(clean(text));
+    if (single) { showSuggest(issues[0].sug.map(x => ({ to: x })), 'هل تقصد:'); return; }
+    box.replaceChildren(h('span', { class: 'hint' }, 'ربما توجد أخطاء إملائية:'),
+      ...issues.slice(0, 8).map(it => h('button', { type: 'button', class: 'chip', title: it.sug.join(' / '), onclick: () => { fixWord(it.word, it.sug[0]); translateNow($('#q').value); } }, h('span', { dir: 'ltr' }, `${it.word} → ${it.sug[0]}`))));
+    box.hidden = false;
+  }
   async function doSearch(raw) {
     const text = clean(raw);
     if (!text) return;
@@ -1165,6 +1360,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     const { src, tgt } = pickLangs(text);
     hideLong();
     syncQ();
+    spellScan(text, src);
     renderSkeleton();
     let m = (aiReady() && cacheGet(cKey(text, src, tgt, 'ai'))) || cacheGet(cKey(text, src, tgt, 'f'));
     if (!m) {
@@ -1173,6 +1369,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     if (id !== seq) return;
     const needAI = aiReady() && (!m || m.mode !== 'ai');
     if (!m && !needAI) {
+      if (src !== 'en') { const ls = lexSuggest(text, src); if (ls.length) showSuggest(ls.map(x => ({ to: x })), 'هل تقصد:'); }
       renderMsg(settings.closed ? 'هذه الكلمة غير موجودة في القاموس الداخلي. أطفئ «الوضع المغلق» من الإعدادات ← الخصوصية والأمان لاستعمال الخدمات الخارجية.' : navigator.onLine ? 'تعذّر جلب بيانات الكلمة الآن. حاول مرة أخرى بعد قليل.' : 'لا يوجد اتصال بالإنترنت ولا توجد نتيجة محفوظة لهذه الكلمة.');
       return;
     }
@@ -1313,6 +1510,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     const id = ++seq;
     const { src, tgt } = pickLangs(text);
     $('#result').replaceChildren();
+    spellScan(text, src);
     const packs = splitText(text, 1400);
     const outs = packs.map(() => null);
     const failed = new Set();
@@ -1834,7 +2032,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     { name: 'Languway English', desc: 'دورة إنجليزية مجانية بـ 30 مستوى', url: 'https://2009malek11-source.github.io/Languway-English/', logo: 'logo-english.png', live: true },
     { name: 'Languway Spanish', desc: 'تعلّم الإسبانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-Spanish/', logo: 'logo-spanish.png', live: true },
     { name: 'Languway French', desc: 'تعلّم الفرنسية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-French/', logo: 'logo-french.png', live: true },
-    { name: 'Languway German', desc: 'تعلّم الألمانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-German/', live: true }
+    { name: 'Languway German', desc: 'تعلّم الألمانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-German/', logo: 'logo-german.png', live: true }
   ];
   function renderProducts() {
     $('#productsBox').replaceChildren(...PRODUCTS.map(p => {
@@ -2030,7 +2228,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         iconBtn('volume', 'نطق', () => speak(it.text, it.src)),
         iconBtn('slow', 'نطق بطيء', () => speak(it.text, it.src, 0.5))));
   }
-  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'lexicon.js', 'ui-text.js', 'brand.woff', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
+  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'lexicon.js', 'brand.woff', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'logo-english.png', 'logo-spanish.png', 'logo-french.png', 'logo-german.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
   let offlineAbort = null;
   async function prepareOffline() {
     const btn = $('#offlineBtn');

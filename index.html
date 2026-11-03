@@ -176,6 +176,7 @@
         <p class="ws-hint conv-entry"><button id="convBtn" class="ghost" type="button"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg><span>محادثة صوتية بين لغتين</span></button></p>
         <p class="hint ws-hint">Enter للترجمة السريعة للكلمات والجمل القصيرة، وللنصوص الطويلة اضغط زر «ترجم» أو Ctrl + Enter.</p>
         <div id="recent" class="recent" aria-label="عمليات البحث الأخيرة"></div>
+        <div id="spellBox" class="spell" hidden></div>
         <div id="result" aria-live="polite"></div>
       </section>
       
@@ -340,6 +341,7 @@
                 <select id="s-exn" data-key="maxExamples"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
               <div class="row"><label for="s-sen">إظهار فروق المعاني</label><input id="s-sen" type="checkbox" data-key="showSenses"></div>
               <div class="row"><label for="s-inf">إظهار التصريفات</label><input id="s-inf" type="checkbox" data-key="showInflections"></div>
+              <div class="row"><label for="s-spell">تدقيق الإملاء في الإنجليزية واقتراح التصحيح</label><input id="s-spell" type="checkbox" data-key="spell"></div>
               <div class="row"><label for="s-enter">مفتاح Enter في مربع الكتابة</label>
                 <select id="s-enter" data-key="enterKey"><option value="translate">يترجم</option><option value="newline">سطر جديد (والترجمة بـ Ctrl+Enter)</option></select></div>
               <div class="row"><label for="s-phon">إظهار طريقة النطق المكتوبة</label><input id="s-phon" type="checkbox" data-key="showPhonetic"></div>
@@ -431,7 +433,7 @@
             <div class="card group" id="aboutCard"><div id="aboutBox"></div></div>
             <div class="card group">
               <h3 class="h2">المصادر والتراخيص</h3>
-              <p class="hint">عند تشغيل الخدمات الخارجية يستعمل الموقع: ويكاموس (Wiktionary) بترخيص CC BY-SA 4.0، وجمل Tatoeba بترخيص CC BY 2.0 FR، وواجهة Free Dictionary API، وخدمة MyMemory للترجمة، وخدمة Pollinations للشرح الذكي، ومكتبة Tesseract.js (Apache 2.0) لقراءة الصور. خط الشعار Poppins بترخيص SIL OFL 1.1. القاموس الداخلي والشعارات من إنتاج Languway.</p>
+              <p class="hint">عند تشغيل الخدمات الخارجية يستعمل الموقع: ويكاموس (Wiktionary) بترخيص CC BY-SA 4.0، وجمل Tatoeba بترخيص CC BY 2.0 FR، وواجهة Free Dictionary API، وخدمة MyMemory للترجمة، وخدمة Pollinations للشرح الذكي، ومكتبة Tesseract.js (Apache 2.0) لقراءة الصور. خط الشعار Poppins بترخيص SIL OFL 1.1، وقائمة تدقيق الإنجليزية من SCOWL (حقوق Kevin Atkinson 2000-2011، استعمال مسموح مع إبقاء هذا الإشعار). القاموس الداخلي والشعارات من إنتاج Languway.</p>
             </div>
           </section>
         </div>
@@ -469,7 +471,6 @@
 <div id="convSheet" class="sheet" role="dialog" aria-modal="true" hidden><div id="convCard" class="sheet-card"></div></div>
 <div id="toast" class="toast" role="status" hidden></div>
 <script src="lexicon.js?b=k7q4m2x9" defer></script>
-<script src="ui-text.js?b=k7q4m2x9" defer></script>
 <script src="script.js?b=k7q4m2x9" defer></script>
 </body>
 </html>

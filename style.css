@@ -592,3 +592,5 @@ a.prod:hover { border-color: var(--brand-2, #1b9be8); }
 [data-density="compact"] .card { padding: 12px; }
 [data-density="compact"] .row { padding-top: 6px; padding-bottom: 6px; }
 [data-density="compact"] .sec { margin-top: 8px; }
+.spell { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px dashed var(--brand-2); }
+.spell[hidden] { display: none; }
