@@ -320,6 +320,34 @@
   };
   const IRR_PL = { man: 'men', woman: 'women', child: 'children', foot: 'feet', tooth: 'teeth', mouse: 'mice', person: 'people', life: 'lives', knife: 'knives', leaf: 'leaves', wife: 'wives' };
   const dbl = w => /^[^aeiou]*[aeiou][^aeiouwxy]$/.test(w) && w.length <= 4;
+  const IRR_REV = (() => {
+    const m = {};
+    Object.keys(IRR).forEach(b => {
+      IRR[b][0].split(' / ').forEach(f => { if (f !== b && !m[f]) m[f] = [b, 'past']; });
+      IRR[b][1].split(' / ').forEach(f => { if (f !== b && !m[f]) m[f] = [b, 'pp']; });
+    });
+    ['was', 'were'].forEach(f => { m[f] = ['be', 'past']; }); m.is = ['be', 'pres']; m.are = ['be', 'pres']; m.am = ['be', 'pres']; m.been = ['be', 'pp']; m.being = ['be', 'ing']; m.has = ['have', 'pres']; m.does = ['do', 'pres']; m.goes = ['go', 'pres'];
+    return m;
+  })();
+  const IRR_PL_REV = (() => { const m = {}; Object.keys(IRR_PL).forEach(k => { m[IRR_PL[k]] = k; }); return m; })();
+  function enLemma(w) {
+    if (IRR[w]) return null;
+    if (IRR_REV[w]) return { base: IRR_REV[w][0], kind: IRR_REV[w][1] };
+    if (IRR_PL_REV[w]) return { base: IRR_PL_REV[w], kind: 'plural' };
+    if (!SP.set || SP.set.has(w) && !/(ing|ed)$/.test(w) && !/ies$/.test(w)) return null;
+    const ok = b => b.length >= 2 && SP.set.has(b);
+    const tries = [
+      ['ing', w.replace(/ing$/, ''), 'ing'], ['ing', w.replace(/ing$/, '') + 'e', 'ing'], ['ing', w.replace(/(.)\1ing$/, '$1'), 'ing'],
+      ['ed', w.replace(/ed$/, ''), 'past'], ['ed', w.replace(/ed$/, '') + 'e', 'past'], ['ed', w.replace(/(.)\1ed$/, '$1'), 'past'], ['ed', w.replace(/ied$/, 'y'), 'past'],
+      ['ies', w.replace(/ies$/, 'y'), 'pres'], ['es', w.replace(/es$/, ''), 'pres'], ['s', w.replace(/s$/, ''), 'pres']
+    ];
+    for (const [suf, b, kind] of tries) {
+      if (!w.endsWith(suf) || b === w || !ok(b)) continue;
+      const re = kind === 'ing' ? inflect(b, 'ing') : kind === 'past' ? inflect(b, 'ed') : inflect(b, 's');
+      if (re === w) return { base: b, kind: kind === 'pres' ? 'pres' : kind };
+    }
+    return null;
+  }
   function verbForms(w) {
     const irr = IRR[w];
     const third = /(s|x|z|ch|sh|o)$/.test(w) ? w + 'es' : /[^aeiou]y$/.test(w) ? w.slice(0, -1) + 'ies' : w + 's';
@@ -565,15 +593,24 @@
       .sort((a, b) => (a.translation ? 0 : 1) - (b.translation ? 0 : 1) || a.text.length - b.text.length)
       .slice(0, 8);
     if (src === 'en' && single && /^[A-Za-z'’-]+$/.test(text)) {
-      const lw = text.toLowerCase();
-      if (poss.includes('verb')) { m.tenses = englishTenses(lw); m.inflections.push(...verbForms(lw)); }
-      if (poss.includes('noun')) m.inflections.push(...nounForms(lw));
-      if (poss.includes('adjective')) m.inflections.push(...adjForms(lw));
-      if (m.inflections.length) m.inflNote = 'تصريفات قياسية؛ قد تختلف بعض الكلمات الشاذة.';
+      const lw0 = text.toLowerCase();
+      if (!SP.set) { try { await Promise.race([spLoad(), new Promise(r => setTimeout(r, 1200))]); } catch (e) {  } }
+      const lem = enLemma(lw0), lw = lem ? lem.base : lw0;
+      const KIND = { past: 'الماضي', pp: 'اسم المفعول (التصريف الثالث)', ing: 'المضارع المستمر', pres: 'المضارع (هو / هي)', plural: 'الجمع' };
+      if (lem) {
+        m.lemma = { form: lw0, base: lw, kind: lem.kind };
+        m.inflNote = '«' + lw0 + '» هي صيغة ' + (lem.kind === 'pres' && !poss.includes('verb') ? KIND.plural : KIND[lem.kind]) + ' من «' + lw + '» — الجدول أدناه للأصل «' + lw + '».';
+      }
+      const asVerb = poss.includes('verb') || (lem && lem.kind !== 'plural' && !(lem.kind === 'pres' && !poss.includes('verb')));
+      const asNoun = poss.includes('noun') || (lem && (lem.kind === 'plural' || (lem.kind === 'pres' && !poss.includes('verb'))));
+      if (asVerb) { m.tenses = englishTenses(lw); m.inflections.push(...verbForms(lw)); }
+      if (asNoun) m.inflections.push(...nounForms(lw));
+      if (!lem && poss.includes('adjective')) m.inflections.push(...adjForms(lw));
+      if (m.inflections.length && !m.inflNote) m.inflNote = 'تصريفات قياسية؛ قد تختلف بعض الكلمات الشاذة.';
       if (m.examples.length < 3) {
         const tpl = [];
-        if (poss.includes('verb')) m.tenses.slice(0, 4).forEach(t => tpl.push(t.example));
-        if (poss.includes('noun')) tpl.push(`This is a ${lw}.`, `I need a ${lw}.`, `Where is the ${lw}?`);
+        if (asVerb) m.tenses.slice(0, 4).forEach(t => tpl.push(t.example));
+        if (asNoun) tpl.push(`This is a ${lw}.`, `I need a ${lw}.`, `Where is the ${lw}?`);
         if (poss.includes('adjective')) tpl.push(`It is very ${lw}.`, `She looks ${lw} today.`, `This one is more ${lw} than that one.`);
         tpl.slice(0, 4).forEach(t => m.examples.push({ text: t, translation: '', lang: 'en', template: true }));
       }
@@ -2030,7 +2067,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
   }
   const PRODUCTS = [
     { name: 'Languway English', desc: 'دورة إنجليزية مجانية بـ 30 مستوى', url: 'https://2009malek11-source.github.io/Languway-English/', logo: 'logo-english.png', live: true },
-    { name: 'Languway Spanish', desc: 'تعلّم الإسبانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-Spanish/', logo: 'logo-spanish.png', live: true },
+    { name: 'Languway Spanish', desc: 'تعلّم الإسبانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/LanguWay-Spanish/', logo: 'logo-spanish.png', live: true },
     { name: 'Languway French', desc: 'تعلّم الفرنسية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-French/', logo: 'logo-french.png', live: true },
     { name: 'Languway German', desc: 'تعلّم الألمانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-German/', logo: 'logo-german.png', live: true }
   ];
