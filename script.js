@@ -2065,6 +2065,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     $$('.set-panel').forEach(p => { p.hidden = p.dataset.panel !== name; });
     window.scrollTo(0, 0);
   }
+  const SHOW_PRODUCTS = false;
   const PRODUCTS = [
     { name: 'Languway English', desc: 'دورة إنجليزية مجانية بـ 30 مستوى', url: 'https://2009malek11-source.github.io/Languway-English/', logo: 'logo-english.png', live: true },
     { name: 'Languway Spanish', desc: 'تعلّم الإسبانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/LanguWay-Spanish/', logo: 'logo-spanish.png', live: true },
@@ -2341,7 +2342,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     applySettings();
     renderRecent();
     renderAbout();
-    renderProducts();
+    if (SHOW_PRODUCTS) renderProducts();
     $$('.set-card[data-set]').forEach(b => b.addEventListener('click', () => openSet(b.dataset.set)));
     $$('.set-back').forEach(b => b.addEventListener('click', () => openSet('')));
     if (/^\?u=/.test(location.search)) history.replaceState(null, '', location.pathname);
