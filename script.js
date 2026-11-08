@@ -2419,6 +2419,29 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     });
     initPanel();
     $('#favFilter').addEventListener('input', renderFavs);
+    const qBox = $('#q'), drop = h('div', { id: 'qDrop', class: 'qdrop', role: 'listbox', hidden: true });
+    $('#searchForm').appendChild(drop);
+    const hideDrop = () => { drop.hidden = true; };
+    const showDrop = () => {
+      const hst = store.get('history', []).slice(0, 6);
+      if (qBox.value.trim() || !hst.length || !settings.showRecent) { hideDrop(); return; }
+      drop.replaceChildren(...hst.map(x => h('button', {
+        type: 'button', role: 'option', class: 'qd-item', dir: dirOf(x.src),
+        onpointerdown: e => { e.preventDefault(); hideDrop(); $('#srcLang').value = x.src; $('#tgtLang').value = x.tgt; qBox.value = x.text; syncLangs(); doSearch(x.text); }
+      }, x.text)));
+      drop.hidden = false;
+    };
+    let dropT = 0;
+    qBox.addEventListener('focus', () => { clearTimeout(dropT); showDrop(); });
+    qBox.addEventListener('input', hideDrop);
+    qBox.addEventListener('blur', () => { dropT = setTimeout(hideDrop, 150); });
+    $('#favShare').addEventListener('click', async () => {
+      const f = getFavs();
+      if (!f.length) { toast('لا توجد كلمات محفوظة'); return; }
+      const t = f.slice(0, 200).map(x => x.text + ' — ' + (x.translation || '')).join('\n');
+      if (navigator.share) { try { await navigator.share({ text: t }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+      copyText(t);
+    });
     $('#favExport').addEventListener('click', exportFavs);
     $('#favCsv').addEventListener('click', () => (getFavs().length ? exportFavsCsv() : toast('لا توجد كلمات محفوظة')));
     $('#favImport').addEventListener('click', () => $('#importFile').click());
@@ -2492,7 +2515,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     window.addEventListener('appinstalled', () => { deferredPrompt = null; updateInstallUI(); toast('تم تثبيت التطبيق'); });
     updateInstallUI();
     const sp = $('#splash');
-    if (sp) setTimeout(() => { sp.classList.add('hide'); setTimeout(() => sp.remove(), 700); }, 1500);
+    if (sp) setTimeout(() => { sp.classList.add('hide'); setTimeout(() => sp.remove(), 350); }, 500);
     const v = new URLSearchParams(location.search).get('view');
     if (['dash', 'favs', 'quiz', 'cards', 'install', 'settings'].includes(v)) showView(v);
     else if (['dash', 'favs', 'quiz', 'cards'].includes(settings.startView)) showView(settings.startView);
