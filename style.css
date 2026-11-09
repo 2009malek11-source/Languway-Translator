@@ -595,7 +595,3 @@ a.prod:hover { border-color: var(--brand-2, #1b9be8); }
 .spell { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px dashed var(--brand-2); }
 .spell[hidden] { display: none; }
 .pane-in { position: relative; }
-.qdrop { position: absolute; inset-inline: 10px; top: 8px; z-index: 6; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 14px 34px -14px rgba(20, 40, 120, .45); padding: 6px; display: flex; flex-direction: column; }
-.qdrop[hidden] { display: none; }
-.qd-item { text-align: start; background: none; border: 0; border-radius: 10px; padding: 11px 12px; font: inherit; color: inherit; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qd-item:hover, .qd-item:focus-visible { background: color-mix(in srgb, var(--brand-2, #2b45d6) 12%, transparent); }

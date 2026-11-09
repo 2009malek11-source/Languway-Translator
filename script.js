@@ -2419,22 +2419,6 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     });
     initPanel();
     $('#favFilter').addEventListener('input', renderFavs);
-    const qBox = $('#q'), drop = h('div', { id: 'qDrop', class: 'qdrop', role: 'listbox', hidden: true });
-    $('#searchForm').appendChild(drop);
-    const hideDrop = () => { drop.hidden = true; };
-    const showDrop = () => {
-      const hst = store.get('history', []).slice(0, 6);
-      if (qBox.value.trim() || !hst.length || !settings.showRecent) { hideDrop(); return; }
-      drop.replaceChildren(...hst.map(x => h('button', {
-        type: 'button', role: 'option', class: 'qd-item', dir: dirOf(x.src),
-        onpointerdown: e => { e.preventDefault(); hideDrop(); $('#srcLang').value = x.src; $('#tgtLang').value = x.tgt; qBox.value = x.text; syncLangs(); doSearch(x.text); }
-      }, x.text)));
-      drop.hidden = false;
-    };
-    let dropT = 0;
-    qBox.addEventListener('focus', () => { clearTimeout(dropT); showDrop(); });
-    qBox.addEventListener('input', hideDrop);
-    qBox.addEventListener('blur', () => { dropT = setTimeout(hideDrop, 150); });
     $('#favShare').addEventListener('click', async () => {
       const f = getFavs();
       if (!f.length) { toast('لا توجد كلمات محفوظة'); return; }
