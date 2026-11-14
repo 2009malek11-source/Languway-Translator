@@ -901,8 +901,10 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     downloadBlob(new Blob(['\uFEFF' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), 'languway-favorites.csv');
   }
   const exportFavs = () => downloadBlob(new Blob([JSON.stringify(getFavs(), null, 2)], { type: 'application/json' }), 'languway-favorites.json');
+  const isJsonFile = f => /\.json$/i.test(f.name) || f.type === 'application/json';
+  const isTextFile = f => /\.(txt|md|csv|srt|vtt)$/i.test(f.name) || /^text\//.test(f.type);
   function importFavs(file) {
-    if (!file || file.size > 2 * 1024 * 1024) { toast('الملف غير صالح أو كبير جداً'); return; }
+    if (!file || file.size > 2 * 1024 * 1024 || !isJsonFile(file)) { toast('الملف غير صالح أو كبير جداً'); return; }
     const r = new FileReader();
     r.onload = () => {
       try {
@@ -1216,7 +1218,6 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
       try { aiWhy = ''; return mergeModels(m0, await buildAI(m0.text, m0.src, m0.tgt)); }
       catch (e) {
         aiWhy = whyText(e);
-        console.warn('AI', e && e.code, e && e.status, e && e.message);
         if (!alive() || e.status === 402 || e.status === 429) break;
       }
     }
@@ -2065,23 +2066,6 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     $$('.set-panel').forEach(p => { p.hidden = p.dataset.panel !== name; });
     window.scrollTo(0, 0);
   }
-  const SHOW_PRODUCTS = false;
-  const PRODUCTS = [
-    { name: 'Languway English', desc: 'دورة إنجليزية مجانية بـ 30 مستوى', url: 'https://2009malek11-source.github.io/Languway-English/', logo: 'logo-english.png', live: true },
-    { name: 'Languway Spanish', desc: 'تعلّم الإسبانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/LanguWay-Spanish/', logo: 'logo-spanish.png', live: true },
-    { name: 'Languway French', desc: 'تعلّم الفرنسية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-French/', logo: 'logo-french.png', live: true },
-    { name: 'Languway German', desc: 'تعلّم الألمانية بالأسلوب نفسه', url: 'https://2009malek11-source.github.io/Languway-German/', logo: 'logo-german.png', live: true }
-  ];
-  function renderProducts() {
-    $('#productsBox').replaceChildren(...PRODUCTS.map(p => {
-      const logo = p.logo ? h('img', { class: 'prod-logo', src: p.logo, alt: '', width: 56, height: 56, loading: 'lazy' }) : h('span', { class: 'prod-logo empty', 'aria-hidden': 'true' });
-      const body = [logo, h('div', { class: 'prod-txt' }, h('b', {}, p.name), h('span', {}, p.live ? p.desc : `${p.desc} — ستتوفر قريباً`)),
-        h('span', { class: 'prod-tag' + (p.live ? ' on' : '') }, p.live ? 'افتح' : 'قريباً')];
-      return p.live
-        ? h('a', { class: 'prod', href: p.url, target: '_blank', rel: 'noopener noreferrer' }, ...body)
-        : h('div', { class: 'prod soon', 'aria-disabled': 'true' }, ...body);
-    }));
-  }
   function confirmThen(msg, fn) { if (!settings.confirmDel || window.confirm(T(msg))) fn(); }
   const prefersDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = () => settings.theme === 'dark' || (settings.theme === 'auto' && prefersDark());
@@ -2266,7 +2250,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         iconBtn('volume', 'نطق', () => speak(it.text, it.src)),
         iconBtn('slow', 'نطق بطيء', () => speak(it.text, it.src, 0.5))));
   }
-  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'lexicon.js', 'brand.woff', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'logo-english.png', 'logo-spanish.png', 'logo-french.png', 'logo-german.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
+  const SHELL_FILES = ['./', 'index.html', 'style.css', 'script.js', 'lexicon.js', 'brand.woff', 'manifest.json', 'icon.png', 'icon-192.png', 'apple-touch-icon.png', 'logo-mark.png', 'logo-full.png', 'favicon.ico', 'icon-maskable-512.png', 'qr.png'];
   let offlineAbort = null;
   async function prepareOffline() {
     const btn = $('#offlineBtn');
@@ -2342,7 +2326,6 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     applySettings();
     renderRecent();
     renderAbout();
-    if (SHOW_PRODUCTS) renderProducts();
     $$('.set-card[data-set]').forEach(b => b.addEventListener('click', () => openSet(b.dataset.set)));
     $$('.set-back').forEach(b => b.addEventListener('click', () => openSet('')));
     if (/^\?u=/.test(location.search)) history.replaceState(null, '', location.pathname);
@@ -2398,6 +2381,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     const loadTextFile = f => {
       if (!f) return;
       if (f.size > 1048576) { toast('الملف أكبر من 1 ميغابايت'); return; }
+      if (!isTextFile(f)) { toast('اختر ملفاً نصياً (txt أو md أو csv أو srt أو vtt)'); return; }
       const rd = new FileReader();
       rd.onload = () => {
         let t = String(rd.result || '');
@@ -2465,7 +2449,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     $('#bkImport').addEventListener('click', () => $('#bkFile').click());
     $('#bkFile').addEventListener('change', e => {
       const f = e.target.files[0]; e.target.value = '';
-      if (!f || f.size > 5 * 1048576) { toast('الملف غير صالح أو كبير جداً'); return; }
+      if (!f || f.size > 5 * 1048576 || !isJsonFile(f)) { toast('الملف غير صالح أو كبير جداً'); return; }
       const rd = new FileReader();
       rd.onload = () => {
         try {
