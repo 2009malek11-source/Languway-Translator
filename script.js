@@ -80,7 +80,7 @@
     useAI: true, closed: false, cache: true, historyMax: 15, dailyGoal: 10,
     qFont: 'normal', reduceMotion: false, micAuto: true, quizLen: 10, favSort: 'new',
     rememberPair: true, spell: true, uiLang: 'ar', kbLang: true, enterKey: 'translate', accent: 'blue', density: 'normal', haptics: false, toastMs: 3000,
-    statsOn: true, startView: 'search', showPhonetic: true, showSynonyms: true, showRegional: true, showRules: true, showBack: true,
+    statsOn: true, imgMode: 'both', startView: 'search', showPhonetic: true, showSynonyms: true, showRegional: true, showRules: true, showBack: true,
     showRecent: true, showDaily: true, confirmDel: true
   };
   function cleanSettings(o) {
@@ -942,6 +942,80 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
       }
     }, icon('translate'), 'ترجم');
   }
+  const EMO = (
+    'apple🍎 banana🍌 orange🍊 lemon🍋 grapes🍇 strawberry🍓 watermelon🍉 peach🍑 cherry🍒 pineapple🍍 mango🥭 tomato🍅 potato🥔 carrot🥕 corn🌽 onion🧅 garlic🧄 bread🍞 cheese🧀 egg🥚 meat🥩 chicken🍗 fish🐟 rice🍚 pizza🍕 burger🍔 cake🍰 cookie🍪 chocolate🍫 coffee☕ tea🍵 milk🥛 water💧 juice🧃 wine🍷 beer🍺 salt🧂 honey🍯 soup🍲 salad🥗 food🍽️ ' +
+    'dog🐕 cat🐈 horse🐎 cow🐄 pig🐖 sheep🐑 goat🐐 rabbit🐇 mouse🐁 lion🦁 tiger🐅 bear🐻 wolf🐺 fox🦊 monkey🐒 elephant🐘 giraffe🦒 camel🐪 bird🐦 duck🦆 eagle🦅 owl🦉 snake🐍 frog🐸 turtle🐢 whale🐋 dolphin🐬 shark🦈 octopus🐙 crab🦀 butterfly🦋 bee🐝 ant🐜 spider🕷️ fly🪰 ' +
+    'tree🌳 flower🌸 rose🌹 grass🌱 leaf🍃 mountain⛰️ sea🌊 ocean🌊 river🏞️ lake🏞️ beach🏖️ desert🏜️ forest🌲 island🏝️ sun☀️ moon🌙 star⭐ sky🌌 cloud☁️ rain🌧️ snow❄️ wind💨 storm⛈️ fire🔥 earth🌍 rainbow🌈 lightning⚡ ' +
+    'house🏠 home🏠 school🏫 hospital🏥 mosque🕌 church⛪ castle🏰 bridge🌉 city🏙️ building🏢 door🚪 window🪟 room🛏️ bed🛏️ chair🪑 table🪑 lamp💡 key🔑 lock🔒 clock🕐 watch⌚ phone📱 computer💻 keyboard⌨️ camera📷 television📺 radio📻 book📖 pen🖊️ pencil✏️ paper📄 letter✉️ mail📧 map🗺️ money💰 coin🪙 gift🎁 bag👜 umbrella☂️ glasses👓 hat🎩 shirt👕 dress👗 shoe👟 shoes👟 ring💍 crown👑 ' +
+    'car🚗 bus🚌 train🚆 plane✈️ airplane✈️ ship🚢 boat⛵ bicycle🚲 bike🚲 motorcycle🏍️ truck🚚 taxi🚕 road🛣️ ' +
+    'head🗣️ eye👁️ ear👂 nose👃 mouth👄 tooth🦷 tongue👅 hand✋ finger☝️ foot🦶 leg🦵 arm💪 heart❤️ brain🧠 bone🦴 baby👶 child🧒 boy👦 girl👧 man👨 woman👩 family👪 doctor🧑‍⚕️ teacher🧑‍🏫 student🧑‍🎓 police👮 king🤴 queen👸 ' +
+    'run🏃 running🏃 walk🚶 jump🤾 swim🏊 fly🕊️ eat🍽️ drink🥤 sleep😴 wake⏰ sit🪑 stand🧍 read📖 write✍️ draw🎨 paint🎨 sing🎤 dance💃 play🎮 laugh😂 cry😢 smile😊 love❤️ hate😠 think🤔 speak🗣️ talk🗣️ listen👂 look👀 see👀 watch👀 hear👂 smell👃 taste👅 touch🤚 kiss😘 hug🤗 wash🧼 clean🧹 cook🍳 buy🛒 sell🏷️ pay💳 give🤲 take🤏 open📂 close🚪 push🫸 pull🫷 throw🎯 catch🤲 kick🦶 climb🧗 drive🚗 ride🚴 travel🧳 work💼 study📚 learn📚 teach🧑‍🏫 call📞 send📤 wait⏳ help🤝 fight🥊 shoot🏹 cut✂️ build🏗️ break💔 win🏆 lose😞 ' +
+    'happy😀 sad😢 angry😠 tired😴 hungry🤤 thirsty🥵 hot🥵 cold🥶 sick🤒 scared😨 surprised😲 love❤️ big🐘 small🐜 fast🏎️ slow🐌 strong💪 old👴 young🧑 new🆕 beautiful🌺 ' +
+    'music🎵 song🎶 guitar🎸 piano🎹 drum🥁 football⚽ soccer⚽ basketball🏀 tennis🎾 game🎮 movie🎬 art🎨 sport🏅 medal🏅 ' +
+    'idea💡 time⏰ day🌞 night🌙 morning🌅 week📅 year📆 birthday🎂 wedding💒 party🎉 holiday🏖️ ' +
+    'one1️⃣ two2️⃣ three3️⃣ red🔴 blue🔵 green🟢 yellow🟡 black⚫ white⚪ '
+  ).trim().split(/\s+(?=[a-z])/).reduce((m, p) => { const i = p.search(/[^a-z ]/); if (i > 0) m[p.slice(0, i).trim()] = p.slice(i); return m; }, {});
+  const IMG_BLOCK = /\b(sex|sexual|porn|nude|naked|erotic|penis|vagina|breast|boob|anal|orgasm|rape|fetish|nsfw|genital|condom)\b/i;
+  const imgCache = new Map();
+  const credit = html => { try { return (new DOMParser().parseFromString(String(html || ''), 'text/html').body.textContent || '').trim().slice(0, 80); } catch { return ''; } };
+  const okImg = u => typeof u === 'string' && u.startsWith('https://upload.wikimedia.org/');
+  const okPage = u => typeof u === 'string' && /^https:\/\/(commons|en)\.wikimedia\.org\/|^https:\/\/en\.wikipedia\.org\//.test(u);
+  async function wmGet(url) {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 7000);
+    try { const r = await fetch(url, { signal: ctl.signal, referrerPolicy: 'no-referrer', credentials: 'omit' }); if (!r.ok) throw new Error('http'); return await r.json(); }
+    finally { clearTimeout(t); }
+  }
+  function imgTerm(m) {
+    let t = m.src === 'en' ? m.text : m.tgt === 'en' ? m.translation : '';
+    t = String(t || '').toLowerCase().replace(/[^a-z' -]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(to|a|an|the) /, '');
+    return t && t.split(' ').length <= 3 && t.length <= 30 && !IMG_BLOCK.test(t) ? t : '';
+  }
+  function emojiFor(term) {
+    if (!term) return '';
+    const lem = enLemma(term);
+    return EMO[term] || (lem && EMO[lem.base]) || EMO[term.replace(/s$/, '')] || '';
+  }
+  async function findImages(term) {
+    if (imgCache.has(term)) return imgCache.get(term);
+    const out = [], enc = encodeURIComponent;
+    try {
+      const j = await wmGet('https://en.wikipedia.org/w/api.php?action=query&redirects=1&prop=pageimages|pageprops&piprop=thumbnail&pithumbsize=480&format=json&origin=*&titles=' + enc(term));
+      Object.values((j.query && j.query.pages) || {}).forEach(p => {
+        if (p.thumbnail && okImg(p.thumbnail.source) && !(p.pageprops && 'disambiguation' in p.pageprops))
+          out.push({ src: p.thumbnail.source, page: 'https://en.wikipedia.org/wiki/' + enc(String(p.title || term).replace(/ /g, '_')), by: 'Wikipedia', lic: '' });
+      });
+    } catch {  }
+    if (out.length < 2) {
+      try {
+        const j = await wmGet('https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrlimit=8&format=json&origin=*&prop=imageinfo&iiprop=url|mime|extmetadata&iiurlwidth=480&gsrsearch=' + enc(term + ' filetype:bitmap -nude -naked -sex -erotic -porn'));
+        Object.values((j.query && j.query.pages) || {}).sort((a, b) => (a.index || 0) - (b.index || 0)).forEach(p => {
+          const i = p.imageinfo && p.imageinfo[0];
+          if (!i || !/^image\/(jpeg|png)$/.test(i.mime) || !okImg(i.thumburl) || !okPage(i.descriptionurl) || IMG_BLOCK.test(p.title || '')) return;
+          const x = i.extmetadata || {};
+          if (out.length < 3) out.push({ src: i.thumburl, page: i.descriptionurl, by: credit(x.Artist && x.Artist.value), lic: credit(x.LicenseShortName && x.LicenseShortName.value) });
+        });
+      } catch {  }
+    }
+    imgCache.set(term, out);
+    return out;
+  }
+  function visualBlock(m) {
+    if (settings.imgMode === 'text') return null;
+    const term = imgTerm(m);
+    if (!term) return null;
+    const emo = emojiFor(term), box = h('div', { class: 'visual', dir: 'ltr' });
+    if (emo) box.append(h('div', { class: 'vis-emoji', 'aria-hidden': 'true' }, emo));
+    if (settings.closed) return emo ? box : null;
+    const strip = h('div', { class: 'vis-strip' }), note = h('p', { class: 'vis-note', dir: 'auto' });
+    box.append(strip, note);
+    findImages(term).then(list => {
+      strip.replaceChildren(...list.map(x => h('a', { class: 'vis-img', href: x.page, target: '_blank', rel: 'noopener noreferrer', title: [x.by, x.lic].filter(Boolean).join(' · ') },
+        h('img', { src: x.src, alt: term, loading: 'lazy', referrerpolicy: 'no-referrer', decoding: 'async', onerror: e => e.target.closest('a').remove() }))));
+      if (list.length) note.textContent = 'صور توضيحية تقريبية — المصدر: ويكيبيديا / ويكيميديا كومنز (اضغط الصورة لمعرفة صاحبها وترخيصها)';
+      else if (!emo) box.remove();
+    });
+    return box;
+  }
   function render(m0, status = 'off') {
     const m = Object.assign(baseModel(m0.mode, m0.text, m0.src, m0.tgt), m0);
     const box = $('#result');
@@ -957,13 +1031,23 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
         starBtn(m),
         iconBtn('share', 'مشاركة النتيجة', () => shareText(`${m.text} = ${m.translation}`)))
     ));
+    const vis = visualBlock(m);
+    if (vis && settings.imgMode === 'image') card.append(vis);
+    const trWrap = h('div', { class: 'tr-wrap' });
+    const hideTr = vis && settings.imgMode === 'image' && m.translation;
+    if (hideTr) {
+      trWrap.hidden = true;
+      card.append(h('button', { type: 'button', class: 'mini reveal', onclick: e => { trWrap.hidden = false; e.currentTarget.remove(); } }, 'إظهار المعنى'));
+    }
     if (m.translation) {
-      card.append(h('div', { class: 'tr-line' },
+      trWrap.append(h('div', { class: 'tr-line' },
         h('span', { class: 'tr', dir: dirOf(m.tgt), lang: m.tgt }, m.translation),
         iconBtn('volume', 'نطق الترجمة', () => speak(m.translation, m.tgt)),
         iconBtn('slow', 'نطق بطيء', () => speak(m.translation, m.tgt, 0.5))));
     }
-    if (m.alts.length) card.append(h('div', { class: 'alts', dir: dirOf(m.tgt) }, m.alts.map(a => h('span', {}, a))));
+    if (m.alts.length) trWrap.append(h('div', { class: 'alts', dir: dirOf(m.tgt) }, m.alts.map(a => h('span', {}, a))));
+    card.append(trWrap);
+    if (vis && settings.imgMode !== 'image') card.append(vis);
     if (settings.showRegional && m.regional.length) {
       card.append(section('الفروق بين الصيغ',
         h('div', { class: 'regional' }, m.regional.map(x => h('div', { class: 'reg' }, h('span', { class: 'lbl' }, x.region), h('b', { dir: dirOf(m.src), lang: m.src }, x.form))))));

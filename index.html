@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="مترجم Languway — ترجم وتعلّم">
   
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval' blob:; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://api.mymemory.translated.net https://api.dictionaryapi.dev https://en.wiktionary.org https://ar.wiktionary.org https://tatoeba.org https://text.pollinations.ai https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; manifest-src 'self'; worker-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval' blob:; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://upload.wikimedia.org; media-src 'self' blob:; connect-src 'self' https://en.wikipedia.org https://commons.wikimedia.org https://api.mymemory.translated.net https://api.dictionaryapi.dev https://en.wiktionary.org https://ar.wiktionary.org https://tatoeba.org https://text.pollinations.ai https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; manifest-src 'self'; worker-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'; upgrade-insecure-requests">
   <meta name="referrer" content="no-referrer">
   
   <meta name="theme-color" content="#1B2FA8">
@@ -344,6 +344,8 @@
               <div class="row"><label for="s-spell">تدقيق الإملاء في الإنجليزية واقتراح التصحيح</label><input id="s-spell" type="checkbox" data-key="spell"></div>
               <div class="row"><label for="s-enter">مفتاح Enter في مربع الكتابة</label>
                 <select id="s-enter" data-key="enterKey"><option value="translate">يترجم</option><option value="newline">سطر جديد (والترجمة بـ Ctrl+Enter)</option></select></div>
+              <div class="row"><label for="s-img">الصور التوضيحية بجانب الترجمة</label>
+                <select id="s-img" data-key="imgMode"><option value="both">معنى وصورة</option><option value="text">معنى فقط</option><option value="image">صورة فقط (المعنى بالضغط)</option></select></div>
               <div class="row"><label for="s-phon">إظهار طريقة النطق المكتوبة</label><input id="s-phon" type="checkbox" data-key="showPhonetic"></div>
               <div class="row"><label for="s-syn">إظهار المرادفات والأضداد</label><input id="s-syn" type="checkbox" data-key="showSynonyms"></div>
               <div class="row"><label for="s-reg">إظهار الفروق بين الصيغ الإقليمية</label><input id="s-reg" type="checkbox" data-key="showRegional"></div>
@@ -416,7 +418,7 @@
             </div>
             <div class="card group">
               <h3 class="h2">ماذا يُرسَل عند إطفاء الوضع المغلق؟</h3>
-              <p class="hint">النص الذي تترجمه فقط، إلى خدمات الترجمة والقواميس والشرح الذكي المجانية، دون أي اسم أو حساب أو معرّف. الموقع لا يطلب تسجيل دخول ولا يجمع بياناتك، وكل ما تحفظه (المفضلة والسجل والإعدادات) يبقى على جهازك وحده.</p>
+              <p class="hint">النص الذي تترجمه فقط، إلى خدمات الترجمة والقواميس والشرح الذكي المجانية، والكلمة الإنجليزية فقط إلى ويكيبيديا وويكيميديا كومنز لجلب الصور التوضيحية (يمكنك إيقافها من «معنى فقط»)، دون أي اسم أو حساب أو معرّف. الموقع لا يطلب تسجيل دخول ولا يجمع بياناتك، وكل ما تحفظه (المفضلة والسجل والإعدادات) يبقى على جهازك وحده.</p>
             </div>
             <div class="card group">
               <h3 class="h2">بياناتك على هذا الجهاز</h3>
@@ -428,7 +430,7 @@
             <div class="card group"><div id="aboutBox"></div></div>
             <div class="card group">
               <h3 class="h2">المصادر والتراخيص</h3>
-              <p class="hint">عند تشغيل الخدمات الخارجية يستعمل الموقع: ويكاموس (Wiktionary) بترخيص CC BY-SA 4.0، وجمل Tatoeba بترخيص CC BY 2.0 FR، وواجهة Free Dictionary API، وخدمة MyMemory للترجمة، وخدمة Pollinations للشرح الذكي، ومكتبة Tesseract.js (Apache 2.0) لقراءة الصور. خط الشعار Poppins بترخيص SIL OFL 1.1، وقائمة تدقيق الإنجليزية من SCOWL (حقوق Kevin Atkinson 2000-2011، استعمال مسموح مع إبقاء هذا الإشعار). القاموس الداخلي والشعارات من إنتاج Languway.</p>
+              <p class="hint">عند تشغيل الخدمات الخارجية يستعمل الموقع: صور ويكيبيديا وويكيميديا كومنز (لكل صورة ترخيصها وصاحبها ويظهران عند الضغط عليها)، ويكاموس (Wiktionary) بترخيص CC BY-SA 4.0، وجمل Tatoeba بترخيص CC BY 2.0 FR، وواجهة Free Dictionary API، وخدمة MyMemory للترجمة، وخدمة Pollinations للشرح الذكي، ومكتبة Tesseract.js (Apache 2.0) لقراءة الصور. خط الشعار Poppins بترخيص SIL OFL 1.1، وقائمة تدقيق الإنجليزية من SCOWL (حقوق Kevin Atkinson 2000-2011، استعمال مسموح مع إبقاء هذا الإشعار). القاموس الداخلي والشعارات من إنتاج Languway.</p>
             </div>
           </section>
         </div>
