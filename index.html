@@ -280,6 +280,8 @@
       <section class="view" data-view="settings" hidden>
         <h1 class="h">الإعدادات</h1>
         
+        <div class="card set-find"><input id="setSearch" type="search" dir="auto" maxlength="40" autocomplete="off" placeholder="ابحث في الإعدادات…" aria-label="ابحث في الإعدادات"></div>
+        <p id="setNone" class="empty" hidden>لا يوجد إعداد بهذا الاسم.</p>
         <div id="setHome" class="set-grid">
           <button class="set-card" type="button" data-set="lang"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-translate"/></svg></span><b>لغة المترجم</b><span>لغة الموقع واللغة الأساسية ولغة الهدف</span></button>
           <button class="set-card" type="button" data-set="look"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg></span><b>المظهر والعرض</b><span>السمة وحجم الخط وتقليل الحركة</span></button>
@@ -335,22 +337,32 @@
           <section class="set-panel" data-panel="translate" hidden>
             <div class="set-head"><button class="icon-btn set-back" type="button" aria-label="رجوع"><svg class="ic" aria-hidden="true"><use href="#i-chevron"/></svg></button><h2 class="h2 flush">الترجمة والنتائج</h2></div>
             <div class="card group">
-              <div class="row"><label for="s-micauto">ترجمة ما أقوله تلقائياً عند إيقاف الميكروفون</label><input id="s-micauto" type="checkbox" data-key="micAuto"></div>
+              <h3 class="h2">النتيجة: ما الذي يظهر؟</h3>
               <div class="row"><label for="s-ex">إظهار الجمل التوضيحية</label><input id="s-ex" type="checkbox" data-key="showExamples"></div>
               <div class="row"><label for="s-exn">عدد الجمل</label>
                 <select id="s-exn" data-key="maxExamples"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
               <div class="row"><label for="s-sen">إظهار فروق المعاني</label><input id="s-sen" type="checkbox" data-key="showSenses"></div>
               <div class="row"><label for="s-inf">إظهار التصريفات</label><input id="s-inf" type="checkbox" data-key="showInflections"></div>
-              <div class="row"><label for="s-spell">تدقيق الإملاء في الإنجليزية واقتراح التصحيح</label><input id="s-spell" type="checkbox" data-key="spell"></div>
-              <div class="row"><label for="s-enter">مفتاح Enter في مربع الكتابة</label>
-                <select id="s-enter" data-key="enterKey"><option value="translate">يترجم</option><option value="newline">سطر جديد (والترجمة بـ Ctrl+Enter)</option></select></div>
-              <div class="row"><label for="s-img">الصور التوضيحية بجانب الترجمة</label>
-                <select id="s-img" data-key="imgMode"><option value="both">معنى وصورة</option><option value="text">معنى فقط</option><option value="image">صورة فقط (المعنى بالضغط)</option></select></div>
               <div class="row"><label for="s-phon">إظهار طريقة النطق المكتوبة</label><input id="s-phon" type="checkbox" data-key="showPhonetic"></div>
               <div class="row"><label for="s-syn">إظهار المرادفات والأضداد</label><input id="s-syn" type="checkbox" data-key="showSynonyms"></div>
               <div class="row"><label for="s-reg">إظهار الفروق بين الصيغ الإقليمية</label><input id="s-reg" type="checkbox" data-key="showRegional"></div>
               <div class="row"><label for="s-rules">إظهار «قاعدة سريعة»</label><input id="s-rules" type="checkbox" data-key="showRules"></div>
               <div class="row"><label for="s-back">إظهار زر الترجمة العكسية للنصوص الطويلة</label><input id="s-back" type="checkbox" data-key="showBack"></div>
+            </div>
+            <div class="card group">
+              <h3 class="h2">الصور التوضيحية</h3>
+              <div class="row"><label for="s-img">الصور التوضيحية بجانب الترجمة</label>
+                <select id="s-img" data-key="imgMode"><option value="both">معنى وصورة</option><option value="text">معنى فقط</option><option value="image">صورة فقط (المعنى بالضغط)</option></select></div>
+              <div class="row"><label for="s-imgn">عدد الصور المعروضة</label>
+                <select id="s-imgn" data-key="imgCount"><option value="0">بدون صور (إيموجي فقط)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+              <div class="row"><label for="s-emo">إظهار إيموجي الكلمة (في النتيجة والمفضلة والبطاقات)</label><input id="s-emo" type="checkbox" data-key="showEmoji"></div>
+            </div>
+            <div class="card group">
+              <h3 class="h2">الكتابة والإدخال</h3>
+              <div class="row"><label for="s-micauto">ترجمة ما أقوله تلقائياً عند إيقاف الميكروفون</label><input id="s-micauto" type="checkbox" data-key="micAuto"></div>
+              <div class="row"><label for="s-spell">تدقيق الإملاء في الإنجليزية واقتراح التصحيح</label><input id="s-spell" type="checkbox" data-key="spell"></div>
+              <div class="row"><label for="s-enter">مفتاح Enter في مربع الكتابة</label>
+                <select id="s-enter" data-key="enterKey"><option value="translate">يترجم</option><option value="newline">سطر جديد (والترجمة بـ Ctrl+Enter)</option></select></div>
               <div class="row"><label for="s-hist">عدد عمليات البحث الأخيرة</label>
                 <select id="s-hist" data-key="historyMax"><option value="0">بدون سجل</option><option value="8">8</option><option value="15">15</option><option value="30">30</option></select></div>
             </div>

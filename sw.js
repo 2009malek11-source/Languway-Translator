@@ -15,12 +15,6 @@ self.addEventListener('activate', e => {
       .then(() => self.clients.claim())
   );
 });
-async function staleWhileRevalidate(req, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(req);
-  const fresh = fetch(req).then(res => { if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone()); return res; }).catch(() => cached);
-  return cached || fresh;
-}
 async function networkFirst(req, cacheName) {
   const cache = await caches.open(cacheName);
   try {

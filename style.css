@@ -592,3 +592,7 @@ body.modal-open { overflow: hidden; }
 .vis-note { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted, #6b7280); }
 .vis-note:empty { display: none; }
 .reveal { margin: 8px 0; }
+.set-find { padding: 8px 12px; margin-bottom: 10px; }
+.set-find input { width: 100%; border: 0; background: transparent; font: inherit; color: inherit; padding: 8px 4px; outline: none; }
+.fav-emo { font-size: 26px; line-height: 1; }
+.card-emo { font-size: 56px; line-height: 1; margin-bottom: 6px; }

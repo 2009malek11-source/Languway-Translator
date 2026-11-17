@@ -80,7 +80,7 @@
     useAI: true, closed: false, cache: true, historyMax: 15, dailyGoal: 10,
     qFont: 'normal', reduceMotion: false, micAuto: true, quizLen: 10, favSort: 'new',
     rememberPair: true, spell: true, uiLang: 'ar', kbLang: true, enterKey: 'translate', accent: 'blue', density: 'normal', haptics: false, toastMs: 3000,
-    statsOn: true, imgMode: 'both', startView: 'search', showPhonetic: true, showSynonyms: true, showRegional: true, showRules: true, showBack: true,
+    statsOn: true, imgMode: 'both', imgCount: 3, showEmoji: true, startView: 'search', showPhonetic: true, showSynonyms: true, showRegional: true, showRules: true, showBack: true,
     showRecent: true, showDaily: true, confirmDel: true
   };
   function cleanSettings(o) {
@@ -881,6 +881,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     }
     box.replaceChildren(...list.map(f => h('div', { class: 'card fav' },
       iconBtn('volume', 'نطق', () => speak(f.text, f.src)),
+      favEmoji(f) && h('span', { class: 'fav-emo', 'aria-hidden': 'true' }, favEmoji(f)),
       h('div', { class: 'txt' },
         h('div', { class: 'w', dir: dirOf(f.src), lang: f.src }, f.text),
         h('div', { class: 't', dir: dirOf(f.tgt), lang: f.tgt }, f.translation)),
@@ -975,6 +976,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     const lem = enLemma(term);
     return EMO[term] || (lem && EMO[lem.base]) || EMO[term.replace(/s$/, '')] || '';
   }
+  const favEmoji = f => (settings.showEmoji ? emojiFor(imgTerm({ src: f.src, tgt: f.tgt, text: f.text, translation: f.translation })) : '');
   async function findImages(term) {
     if (imgCache.has(term)) return imgCache.get(term);
     const out = [], enc = encodeURIComponent;
@@ -1003,13 +1005,13 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     if (settings.imgMode === 'text') return null;
     const term = imgTerm(m);
     if (!term) return null;
-    const emo = emojiFor(term), box = h('div', { class: 'visual', dir: 'ltr' });
+    const emo = settings.showEmoji ? emojiFor(term) : '', box = h('div', { class: 'visual', dir: 'ltr' });
     if (emo) box.append(h('div', { class: 'vis-emoji', 'aria-hidden': 'true' }, emo));
-    if (settings.closed) return emo ? box : null;
+    if (settings.closed || !(Number(settings.imgCount) > 0)) return emo ? box : null;
     const strip = h('div', { class: 'vis-strip' }), note = h('p', { class: 'vis-note', dir: 'auto' });
     box.append(strip, note);
     findImages(term).then(list => {
-      strip.replaceChildren(...list.map(x => h('a', { class: 'vis-img', href: x.page, target: '_blank', rel: 'noopener noreferrer', title: [x.by, x.lic].filter(Boolean).join(' · ') },
+      strip.replaceChildren(...list.slice(0, Number(settings.imgCount) || 3).map(x => h('a', { class: 'vis-img', href: x.page, target: '_blank', rel: 'noopener noreferrer', title: [x.by, x.lic].filter(Boolean).join(' · ') },
         h('img', { src: x.src, alt: term, loading: 'lazy', referrerpolicy: 'no-referrer', decoding: 'async', onerror: e => e.target.closest('a').remove() }))));
       if (list.length) note.textContent = 'صور توضيحية تقريبية — المصدر: ويكيبيديا / ويكيميديا كومنز (اضغط الصورة لمعرفة صاحبها وترخيصها)';
       else if (!emo) box.remove();
@@ -1042,6 +1044,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     if (m.translation) {
       trWrap.append(h('div', { class: 'tr-line' },
         h('span', { class: 'tr', dir: dirOf(m.tgt), lang: m.tgt }, m.translation),
+        iconBtn('copy', 'نسخ الترجمة', () => copyText(m.translation)),
         iconBtn('volume', 'نطق الترجمة', () => speak(m.translation, m.tgt)),
         iconBtn('slow', 'نطق بطيء', () => speak(m.translation, m.tgt, 0.5))));
     }
@@ -2079,7 +2082,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     if (name === 'dash') renderDash();
     if (name === 'cards') renderCards();
     if (name === 'install') updateInstallUI();
-    if (name === 'settings') openSet('');
+    if (name === 'settings') { $('#setSearch').value = ''; openSet(''); }
     window.scrollTo(0, 0);
   }
   let deferredPrompt = null;
@@ -2148,7 +2151,21 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
   function openSet(name) {
     $('#setHome').hidden = !!name;
     $$('.set-panel').forEach(p => { p.hidden = p.dataset.panel !== name; });
+    $$('.set-panel .row, .set-panel .group').forEach(r => { r.hidden = false; });
     window.scrollTo(0, 0);
+  }
+  function filterSettings(q) {
+    const t = fold(q.trim());
+    if (t.length < 2) { $('#setNone').hidden = true; openSet(''); return; }
+    $('#setHome').hidden = true;
+    let any = false;
+    $$('.set-panel').forEach(p => {
+      let n = 0;
+      $$('.row', p).forEach(r => { const ok = fold(r.textContent).includes(t); r.hidden = !ok; if (ok) n++; });
+      $$('.group', p).forEach(g => { g.hidden = !$$('.row', g).some(r => !r.hidden); });
+      p.hidden = !n; any = any || !!n;
+    });
+    $('#setNone').hidden = any;
   }
   function confirmThen(msg, fn) { if (!settings.confirmDel || window.confirm(T(msg))) fn(); }
   const prefersDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
@@ -2326,7 +2343,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
     const flip = h('div', { class: 'flip' }, h('div', { class: 'flip-in', role: 'button', tabindex: '0', 'aria-label': 'اقلب البطاقة',
       onclick: e => flipIt(e.currentTarget),
       onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flipIt(e.currentTarget); } } },
-      h('div', { class: 'face front' }, h('div', { class: 'big', dir: dirOf(it.src), lang: it.src }, it.text), h('p', { class: 'hint' }, 'اضغط لقلب البطاقة')),
+      h('div', { class: 'face front' }, favEmoji(it) && h('div', { class: 'card-emo', 'aria-hidden': 'true' }, favEmoji(it)), h('div', { class: 'big', dir: dirOf(it.src), lang: it.src }, it.text), h('p', { class: 'hint' }, 'اضغط لقلب البطاقة')),
       h('div', { class: 'face back' }, h('div', { class: 'big', dir: dirOf(it.tgt), lang: it.tgt }, it.translation))));
     box.replaceChildren(
       h('p', { class: 'hint center' }, `المتبقي في هذه الجلسة: ${deck.items.length}`), flip, gradeRow,
@@ -2494,6 +2511,7 @@ words: only when the text is a sentence or phrase: up to 8 key words, especially
       if (navigator.share) { try { await navigator.share({ text: t }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
       copyText(t);
     });
+    $('#setSearch').addEventListener('input', e => filterSettings(e.target.value));
     $('#favExport').addEventListener('click', exportFavs);
     $('#favCsv').addEventListener('click', () => (getFavs().length ? exportFavsCsv() : toast('لا توجد كلمات محفوظة')));
     $('#favImport').addEventListener('click', () => $('#importFile').click());
